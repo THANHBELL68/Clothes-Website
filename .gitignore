@@ -1,0 +1,32 @@
+# Mật khẩu và cấu hình riêng
+.env
+.env.*
+!.env.example
+
+# Sao lưu và dữ liệu thật
+*.dump
+*.backup
+*.bak
+backup/
+
+# Ảnh người dùng tải lên
+media/
+uploads/
+
+# Python / Django
+__pycache__/
+*.pyc
+venv/
+.venv/
+db.sqlite3
+
+# Laravel / PHP
+vendor/
+node_modules/
+storage/logs/
+
+# Editor / hệ điều hành
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
