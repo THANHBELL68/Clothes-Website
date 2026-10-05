@@ -591,15 +591,23 @@ AFTER UPDATE OF status ON return_requests
 FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status)
 EXECUTE FUNCTION return_to_ledger();
 
--- 13.6b Doi tra chi duoc yeu cau cho don da hoan thanh va trong thoi han (system_settings.return.window_days)
+-- 13.6b Doi tra chi duoc yeu cau boi chu don, cho don da hoan thanh va trong thoi han
+--       (system_settings.return.window_days). Yeu cau moi luon bat dau o 'pending'.
 CREATE FUNCTION check_return_window() RETURNS trigger AS $$
 DECLARE
     o_status VARCHAR(15);
     o_done   TIMESTAMPTZ;
+    o_user   BIGINT;
     win_days INTEGER;
 BEGIN
-    SELECT status, completed_at INTO o_status, o_done FROM orders WHERE id = NEW.order_id;
-    IF o_status <> 'completed' THEN
+    IF NEW.status <> 'pending' THEN
+        RAISE EXCEPTION 'Yeu cau doi/tra moi phai o trang thai pending.';
+    END IF;
+    SELECT status, completed_at, user_id INTO o_status, o_done, o_user FROM orders WHERE id = NEW.order_id;
+    IF o_user <> NEW.user_id THEN
+        RAISE EXCEPTION 'Chi chu don hang moi duoc yeu cau doi/tra.';
+    END IF;
+    IF o_status <> 'completed' OR o_done IS NULL THEN
         RAISE EXCEPTION 'Chi duoc yeu cau doi/tra cho don da hoan thanh.';
     END IF;
     SELECT COALESCE(NULLIF(value, '')::INTEGER, 7) INTO win_days
@@ -615,6 +623,115 @@ CREATE TRIGGER trg_return_window
 BEFORE INSERT ON return_requests
 FOR EACH ROW EXECUTE FUNCTION check_return_window();
 
+-- 13.6c Luong trang thai doi/tra (chan nhap kho 2 lan, chan bo qua buoc duyet):
+--       pending -> approved | rejected
+--       approved -> received
+--       received -> refunded (tra hang) | completed (doi hang)
+--       refunded -> completed
+--       Chi xoa duoc yeu cau con 'pending'.
+CREATE FUNCTION enforce_return_status() RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        IF OLD.status <> 'pending' THEN
+            RAISE EXCEPTION 'Chi xoa duoc yeu cau doi/tra con cho duyet.';
+        END IF;
+        RETURN OLD;
+    END IF;
+    IF NEW.order_id <> OLD.order_id OR NEW.user_id <> OLD.user_id OR NEW.type <> OLD.type THEN
+        RAISE EXCEPTION 'Khong duoc doi don hang, khach hang hoac loai cua yeu cau doi/tra.';
+    END IF;
+    IF NEW.status = OLD.status THEN
+        RETURN NEW;
+    END IF;
+    IF NOT (
+           (OLD.status = 'pending'  AND NEW.status IN ('approved','rejected'))
+        OR (OLD.status = 'approved' AND NEW.status = 'received')
+        OR (OLD.status = 'received' AND NEW.type = 'return'   AND NEW.status = 'refunded')
+        OR (OLD.status = 'received' AND NEW.type = 'exchange' AND NEW.status = 'completed')
+        OR (OLD.status = 'refunded' AND NEW.status = 'completed')
+    ) THEN
+        RAISE EXCEPTION 'Khong the chuyen yeu cau doi/tra tu "%" sang "%".', OLD.status, NEW.status;
+    END IF;
+    IF NEW.status = 'approved'
+       AND NOT EXISTS (SELECT 1 FROM return_request_items WHERE return_id = NEW.id) THEN
+        RAISE EXCEPTION 'Yeu cau doi/tra chua co dong hang nao.';
+    END IF;
+    IF NEW.status IN ('approved','rejected') THEN
+        NEW.reviewed_by := COALESCE(NEW.reviewed_by, app_user_id());
+        NEW.reviewed_at := now();
+    ELSIF NEW.status = 'received' THEN
+        NEW.received_by := COALESCE(NEW.received_by, app_user_id());
+        NEW.received_at := now();
+    ELSIF NEW.status = 'refunded' THEN
+        NEW.refunded_at := now();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_return_status_flow
+BEFORE UPDATE OR DELETE ON return_requests
+FOR EACH ROW EXECUTE FUNCTION enforce_return_status();
+
+-- 13.6d Dong hang doi/tra: chi them/sua/xoa khi yeu cau con 'pending',
+--       dong hang phai thuoc dung don, tong so luong doi/tra (tru yeu cau bi tu choi)
+--       khong vuot so luong da mua. Doi hang bat buoc chon bien the moi, tra hang thi khong.
+CREATE FUNCTION check_return_item() RETURNS trigger AS $$
+DECLARE
+    r_status VARCHAR(10);
+    r_type   VARCHAR(10);
+    r_order  BIGINT;
+    oi_order BIGINT;
+    oi_qty   INTEGER;
+    da_tra   INTEGER;
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        SELECT status INTO r_status FROM return_requests WHERE id = OLD.return_id;
+        -- Khong tim thay: dang xoa theo CASCADE tu yeu cau 'pending'
+        IF FOUND AND r_status <> 'pending' THEN
+            RAISE EXCEPTION 'Chi sua duoc dong hang khi yeu cau doi/tra con cho duyet.';
+        END IF;
+        IF TG_OP = 'DELETE' THEN
+            RETURN OLD;
+        END IF;
+    END IF;
+
+    SELECT status, type, order_id INTO r_status, r_type, r_order
+    FROM return_requests WHERE id = NEW.return_id;
+    IF r_status <> 'pending' THEN
+        RAISE EXCEPTION 'Chi sua duoc dong hang khi yeu cau doi/tra con cho duyet.';
+    END IF;
+
+    -- Khoa dong hang de 2 yeu cau dong thoi khong cung vuot so luong
+    SELECT order_id, quantity INTO oi_order, oi_qty
+    FROM order_items WHERE id = NEW.order_item_id FOR UPDATE;
+    IF oi_order <> r_order THEN
+        RAISE EXCEPTION 'Dong hang khong thuoc don hang cua yeu cau doi/tra.';
+    END IF;
+    IF r_type = 'exchange' AND NEW.exchange_variant_id IS NULL THEN
+        RAISE EXCEPTION 'Doi hang phai chon bien the (size/mau) moi.';
+    END IF;
+    IF r_type = 'return' AND NEW.exchange_variant_id IS NOT NULL THEN
+        RAISE EXCEPTION 'Tra hang khong co bien the doi sang.';
+    END IF;
+
+    SELECT COALESCE(SUM(ri.quantity), 0) INTO da_tra
+    FROM return_request_items ri
+    JOIN return_requests rr ON rr.id = ri.return_id
+    WHERE ri.order_item_id = NEW.order_item_id
+      AND rr.status <> 'rejected'
+      AND ri.id <> NEW.id;
+    IF da_tra + NEW.quantity > oi_qty THEN
+        RAISE EXCEPTION 'So luong doi/tra (%) vuot so luong da mua (%).', da_tra + NEW.quantity, oi_qty;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_return_item_check
+BEFORE INSERT OR UPDATE OR DELETE ON return_request_items
+FOR EACH ROW EXECUTE FUNCTION check_return_item();
+
 -- 13.7 So cai diem -> cap nhat users.loyalty_points (CHECK >= 0 chan tieu qua so diem co)
 CREATE FUNCTION apply_loyalty() RETURNS trigger AS $$
 BEGIN
@@ -629,8 +746,12 @@ FOR EACH ROW EXECUTE FUNCTION apply_loyalty();
 
 -- 13.8 Chan chuyen trang thai don sai luong + ghi lich su
 --      new -> processing -> packing -> shipping -> completed ; huy chi tu new/processing
+--      Sang 'shipping' phai co phieu xuat kho du so luong tung bien the trong don.
+--      cancelled_at / completed_at chi do trigger gan (completed_at quyet dinh han doi/tra).
 CREATE FUNCTION enforce_order_status() RETURNS trigger AS $$
 BEGIN
+    NEW.cancelled_at := OLD.cancelled_at;
+    NEW.completed_at := OLD.completed_at;
     IF NEW.status = OLD.status THEN
         RETURN NEW;
     END IF;
@@ -642,6 +763,19 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Khong the chuyen don hang tu "%" sang "%".', OLD.status, NEW.status;
     END IF;
+    IF NEW.status = 'shipping' AND EXISTS (
+        SELECT 1
+        FROM (SELECT variant_id, SUM(quantity) AS qty
+              FROM order_items WHERE order_id = NEW.id GROUP BY variant_id) o
+        LEFT JOIN (SELECT gi.variant_id, SUM(gi.quantity) AS qty
+                   FROM goods_issue_items gi
+                   JOIN goods_issues g ON g.id = gi.issue_id
+                   WHERE g.order_id = NEW.id GROUP BY gi.variant_id) x
+               ON x.variant_id = o.variant_id
+        WHERE COALESCE(x.qty, 0) <> o.qty
+    ) THEN
+        RAISE EXCEPTION 'Don % chua xuat kho du hang, chua the chuyen sang giao hang.', NEW.code;
+    END IF;
     IF NEW.status = 'cancelled' THEN NEW.cancelled_at := now(); END IF;
     IF NEW.status = 'completed' THEN NEW.completed_at := now(); END IF;
     RETURN NEW;
@@ -651,6 +785,107 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_order_status_flow
 BEFORE UPDATE ON orders
 FOR EACH ROW EXECUTE FUNCTION enforce_order_status();
+
+-- Don moi luon bat dau o 'new' (khong insert thang don 'completed' de lach han doi/tra)
+CREATE FUNCTION check_order_insert() RETURNS trigger AS $$
+BEGIN
+    IF NEW.status <> 'new' THEN
+        RAISE EXCEPTION 'Don hang moi phai o trang thai new.';
+    END IF;
+    NEW.cancelled_at := NULL;
+    NEW.completed_at := NULL;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_order_insert
+BEFORE INSERT ON orders
+FOR EACH ROW EXECUTE FUNCTION check_order_insert();
+
+-- Dong hang chi them/sua/xoa khi don con 'new' (sau do da dung de xuat kho, doi tra, danh gia)
+CREATE FUNCTION check_order_item_change() RETURNS trigger AS $$
+DECLARE
+    o_status VARCHAR(15);
+BEGIN
+    SELECT status INTO o_status FROM orders
+    WHERE id = CASE WHEN TG_OP = 'DELETE' THEN OLD.order_id ELSE NEW.order_id END;
+    -- Khong tim thay: dang xoa theo CASCADE tu don hang
+    IF FOUND AND o_status <> 'new' THEN
+        RAISE EXCEPTION 'Chi sua duoc dong hang khi don con o trang thai new.';
+    END IF;
+    IF TG_OP = 'UPDATE' AND NEW.order_id <> OLD.order_id THEN
+        RAISE EXCEPTION 'Khong duoc chuyen dong hang sang don khac.';
+    END IF;
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_order_item_change
+BEFORE INSERT OR UPDATE OR DELETE ON order_items
+FOR EACH ROW EXECUTE FUNCTION check_order_item_change();
+
+-- 13.8b Phieu xuat kho gan voi don: chi tao khi don dang 'packing' (sau khi het han huy),
+--       chi xuat bien the co trong don va khong vuot so luong da dat.
+--       Phieu xuat khong gan don (order_id NULL) thi khong kiem tra.
+CREATE FUNCTION check_goods_issue() RETURNS trigger AS $$
+DECLARE
+    o_status VARCHAR(15);
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        IF NEW.order_id IS DISTINCT FROM OLD.order_id THEN
+            RAISE EXCEPTION 'Khong duoc doi don hang cua phieu xuat.';
+        END IF;
+        RETURN NEW;
+    END IF;
+    IF NEW.order_id IS NOT NULL THEN
+        SELECT status INTO o_status FROM orders WHERE id = NEW.order_id;
+        IF o_status <> 'packing' THEN
+            RAISE EXCEPTION 'Chi tao phieu xuat cho don dang dong goi (don dang o "%").', o_status;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_goods_issue_check
+BEFORE INSERT OR UPDATE ON goods_issues
+FOR EACH ROW EXECUTE FUNCTION check_goods_issue();
+
+CREATE FUNCTION check_goods_issue_item() RETURNS trigger AS $$
+DECLARE
+    o_id     BIGINT;
+    o_status VARCHAR(15);
+    da_dat   INTEGER;
+    da_xuat  INTEGER;
+BEGIN
+    SELECT order_id INTO o_id FROM goods_issues WHERE id = NEW.issue_id;
+    IF o_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+    -- Khoa don: cac phieu xuat dong thoi cho cung don chay lan luot
+    SELECT status INTO o_status FROM orders WHERE id = o_id FOR UPDATE;
+    IF o_status <> 'packing' THEN
+        RAISE EXCEPTION 'Chi xuat kho cho don dang dong goi (don dang o "%").', o_status;
+    END IF;
+    SELECT SUM(quantity) INTO da_dat FROM order_items
+    WHERE order_id = o_id AND variant_id = NEW.variant_id;
+    IF da_dat IS NULL THEN
+        RAISE EXCEPTION 'Bien the % khong co trong don hang.', NEW.variant_id;
+    END IF;
+    SELECT COALESCE(SUM(gi.quantity), 0) INTO da_xuat
+    FROM goods_issue_items gi
+    JOIN goods_issues g ON g.id = gi.issue_id
+    WHERE g.order_id = o_id AND gi.variant_id = NEW.variant_id;
+    IF da_xuat + NEW.quantity > da_dat THEN
+        RAISE EXCEPTION 'Xuat kho (%) vuot so luong khach dat (%).', da_xuat + NEW.quantity, da_dat;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_goods_issue_item_check
+BEFORE INSERT ON goods_issue_items
+FOR EACH ROW EXECUTE FUNCTION check_goods_issue_item();
 
 CREATE FUNCTION log_order_status() RETURNS trigger AS $$
 BEGIN
@@ -680,6 +915,42 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_stock_append_only   BEFORE UPDATE OR DELETE ON stock_movements      FOR EACH ROW EXECUTE FUNCTION forbid_modify();
 CREATE TRIGGER trg_loyalty_append_only BEFORE UPDATE OR DELETE ON loyalty_transactions FOR EACH ROW EXECUTE FUNCTION forbid_modify();
 CREATE TRIGGER trg_audit_append_only   BEFORE UPDATE OR DELETE ON audit_logs           FOR EACH ROW EXECUTE FUNCTION forbid_modify();
+-- Dong phieu kho da ghi so cai: sua/xoa se lam lech ton, sai thi tao phieu dieu chinh/kiem ke
+CREATE TRIGGER trg_receipt_items_append_only   BEFORE UPDATE OR DELETE ON goods_receipt_items FOR EACH ROW EXECUTE FUNCTION forbid_modify();
+CREATE TRIGGER trg_issue_items_append_only     BEFORE UPDATE OR DELETE ON goods_issue_items   FOR EACH ROW EXECUTE FUNCTION forbid_modify();
+CREATE TRIGGER trg_stocktake_items_append_only BEFORE UPDATE OR DELETE ON stocktake_items     FOR EACH ROW EXECUTE FUNCTION forbid_modify();
+
+-- 13.10 Danh gia: chi chu don, dong hang dung san pham, don da hoan thanh; danh gia moi cho duyet
+CREATE FUNCTION check_review() RETURNS trigger AS $$
+DECLARE
+    o_user    BIGINT;
+    o_status  VARCHAR(15);
+    v_product BIGINT;
+BEGIN
+    SELECT o.user_id, o.status, v.product_id INTO o_user, o_status, v_product
+    FROM order_items oi
+    JOIN orders o           ON o.id = oi.order_id
+    JOIN product_variants v ON v.id = oi.variant_id
+    WHERE oi.id = NEW.order_item_id;
+    IF o_user <> NEW.user_id THEN
+        RAISE EXCEPTION 'Chi nguoi mua moi duoc danh gia.';
+    END IF;
+    IF v_product <> NEW.product_id THEN
+        RAISE EXCEPTION 'Dong hang khong phai san pham dang danh gia.';
+    END IF;
+    IF o_status <> 'completed' THEN
+        RAISE EXCEPTION 'Chi danh gia duoc don da hoan thanh.';
+    END IF;
+    IF TG_OP = 'INSERT' AND NEW.status <> 'pending' THEN
+        RAISE EXCEPTION 'Danh gia moi phai o trang thai pending.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_review_check
+BEFORE INSERT OR UPDATE OF user_id, product_id, order_item_id ON reviews
+FOR EACH ROW EXECUTE FUNCTION check_review();
 
 -- ---------------------------------------------------------------------
 -- 14. VIEW

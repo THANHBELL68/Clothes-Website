@@ -92,7 +92,8 @@ Lưu ý hai quyết định đã suy luận từ tài liệu phân quyền, nhó
    ```
 
 4. **Sinh mã đơn** (`orders.code`), mã phiếu (`goods_receipts.code`...) ở phía ứng dụng.
-5. **Giữ chỗ tồn kho khi đặt hàng là việc của ứng dụng.** Tồn kho chỉ giảm khi tạo phiếu xuất kho, không giảm lúc khách đặt hàng. Ứng dụng nên kiểm tra tồn trước khi cho đặt, để tránh bán quá số lượng.
+5. **Giữ chỗ tồn kho khi đặt hàng là việc của ứng dụng.** Tồn kho chỉ giảm khi tạo phiếu xuất kho (lúc đơn `packing`), không giảm lúc khách đặt hàng. Ứng dụng nên kiểm tra tồn trước khi cho đặt, để tránh bán quá số lượng.
+6. **Tạo đơn và dòng hàng trong cùng giao dịch**, khi đơn còn `new`. Sau đó không thêm/sửa dòng hàng được nữa.
 
 ## Những gì database tự xử lý (trigger)
 
@@ -100,9 +101,11 @@ Lưu ý hai quyết định đã suy luận từ tài liệu phân quyền, nhó
 |---|---|
 | Tồn kho | Thêm dòng vào phiếu nhập/xuất, kiểm kê hoặc duyệt trả hàng thì `stock_movements` tự ghi dòng sổ cái, và `product_variants.stock` tự cộng/trừ. Tồn không thể âm |
 | Điểm loyalty | Thêm dòng vào `loyalty_transactions` thì `users.loyalty_points` tự cập nhật. Không tiêu quá số điểm đang có |
-| Luồng trạng thái đơn | `new → processing → packing → shipping → completed`. Chỉ hủy được khi đơn còn `new` hoặc `processing`. Chuyển sai luồng sẽ báo lỗi. Mỗi lần đổi được ghi vào `order_status_history` |
-| Đổi/trả | Chỉ tạo được cho đơn đã `completed`, trong thời hạn `return.window_days` (mặc định 7 ngày) |
-| Sổ cái và nhật ký | `stock_movements`, `loyalty_transactions`, `audit_logs` **chỉ cho thêm dòng**, không sửa hay xóa. Sai thì thêm dòng điều chỉnh |
+| Luồng trạng thái đơn | Đơn mới luôn ở `new`. `new → processing → packing → shipping → completed`. Chỉ hủy được khi đơn còn `new` hoặc `processing`. Chuyển sai luồng sẽ báo lỗi. Mỗi lần đổi được ghi vào `order_status_history`. `cancelled_at`, `completed_at` do trigger gán, không sửa tay được. Dòng hàng (`order_items`) chỉ sửa được khi đơn còn `new` |
+| Đơn ↔ phiếu xuất | Phiếu xuất gắn đơn chỉ tạo được khi đơn đang `packing`, chỉ xuất biến thể có trong đơn và không vượt số lượng đặt. Đơn chỉ sang `shipping` khi đã xuất **đủ** từng biến thể. Phiếu xuất không gắn đơn (`order_id` NULL) thì không kiểm tra |
+| Đổi/trả | Chỉ chủ đơn tạo được, cho đơn đã `completed`, trong thời hạn `return.window_days` (mặc định 7 ngày). Luồng: `pending → approved/rejected`, `approved → received`, `received → refunded` (trả) hoặc `completed` (đổi), `refunded → completed`. `reviewed_by/at`, `received_by/at`, `refunded_at` tự gán. Dòng hàng đổi/trả phải thuộc đúng đơn, tổng số lượng (trừ yêu cầu bị từ chối) không vượt số đã mua, chỉ sửa được khi còn `pending`. Đổi hàng bắt buộc có `exchange_variant_id` |
+| Đánh giá | Chỉ người mua, đúng sản phẩm của dòng hàng, đơn đã `completed`. Đánh giá mới luôn ở `pending` |
+| Sổ cái và nhật ký | `stock_movements`, `loyalty_transactions`, `audit_logs` và các dòng phiếu kho (`goods_receipt_items`, `goods_issue_items`, `stocktake_items`) **chỉ cho thêm dòng**, không sửa hay xóa. Sai thì thêm dòng điều chỉnh hoặc kiểm kê |
 
 Hệ quả: dữ liệu mẫu trong `03_seed_demo.sql` không xóa từng dòng được. Muốn bỏ thì tạo lại database từ đầu.
 
