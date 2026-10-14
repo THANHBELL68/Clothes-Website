@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles, Tag, ShieldCheck, Play } from 'lucide-react';
+import { ArrowRight, Sparkles, Tag, Play, Pause, Volume2, VolumeX, Video, VideoOff } from 'lucide-react';
 import { PRODUCTS } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
 
@@ -8,74 +8,162 @@ export default function HomePage() {
   const featuredProduct = PRODUCTS.find((p) => p.id === 1) || PRODUCTS[0];
   const hotProducts = PRODUCTS.slice(0, 4);
 
+  // Trạng thái điều khiển video nền của sản phẩm nữ (Áo Kiểu Vải Rayon)
+  const [isProductVideoActive, setIsProductVideoActive] = useState(true);
+  const [isProductVideoMuted, setIsProductVideoMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const togglePlay = () => {
+    const vid = document.getElementById('hero-product-video');
+    if (vid) {
+      if (isPlaying) {
+        vid.pause();
+        setIsPlaying(false);
+      } else {
+        vid.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
   return (
     <div className="space-y-16">
       
-      {/* Hero Banner Chính - Làm nổi bật Áo Kiểu Nữ Rayon có Video */}
-      <section className="relative rounded-3xl overflow-hidden bg-neutral-900 text-white min-h-[500px] flex items-center shadow-2xl">
-        {/* Background Overlay */}
-        <div className="absolute inset-0 z-0 opacity-40">
-          <img
-            src="/images/products/nu_demo/san_pham1/vngoods_10_479073_3x4.avif"
-            alt="Hero background"
-            className="w-full h-full object-cover object-top filter blur-xs scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-900/80 to-transparent"></div>
-        </div>
+      {/* =========================================================================
+          HERO BANNER CHÍNH - VIDEO NỀN SẢN PHẨM NỮ TỰ ĐỘNG CHẠY CÓ THỂ TẮT MỞ
+          Góc cạnh sắc nét, hiệu ứng Liquid Glass
+      ========================================================================== */}
+      <section className="relative rounded-sm overflow-hidden bg-neutral-950 text-white min-h-[540px] flex items-center shadow-2xl border border-white/10">
+        
+        {/* Nền Video hoặc Ảnh tĩnh chuyển đổi linh hoạt */}
+        {isProductVideoActive ? (
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <video
+              id="hero-product-video"
+              src="/images/products/nu_demo/san_pham1/video_intro.mp4"
+              autoPlay
+              loop
+              muted={isProductVideoMuted}
+              playsInline
+              className="w-full h-full object-cover object-center filter brightness-[0.75] contrast-[1.1] scale-105"
+            />
+            {/* Lớp phủ Liquid Glass Frosted chuyển tiếp */}
+            <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/70 to-transparent backdrop-blur-[1px]"></div>
+          </div>
+        ) : (
+          <div className="absolute inset-0 z-0">
+            <img
+              src="/images/products/nu_demo/san_pham1/vngoods_10_479073_3x4.avif"
+              alt="Hero background"
+              className="w-full h-full object-cover object-top filter brightness-50"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/80 to-transparent"></div>
+          </div>
+        )}
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 py-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        {/* Nội dung trên Banner */}
+        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 py-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center w-full">
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" /> Bộ Sưu Tập Thu Đông 2026
+            
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-sm liquid-glass text-amber-300 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Bộ Sưu Tập Nữ Thu Đông 2026 • Video Trực Tuyến</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-              Thanh Lịch Công Sở <br />
-              <span className="text-amber-400">Vải Rayon Tái Chế</span>
+              Thanh Lịch Từng Đường Nét <br />
+              <span className="text-amber-400">Áo Kiểu Nữ Vải Rayon Tái Chế</span>
             </h1>
 
             <p className="text-neutral-300 text-sm sm:text-base max-w-lg leading-relaxed">
-              Trải nghiệm độ mềm mại, thoáng khí vượt trội với thiết kế cổ mở tay lửng 3/4. Tinh tế, hiện đại và thân thiện với môi trường.
+              Trải nghiệm độ mềm mại, thoáng mát và co giãn nhẹ với công nghệ dệt cao cấp. 
+              Video trình diễn thực tế chuyển động sống động của trang phục trên người mẫu.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            {/* Cụm nút hành động góc cạnh Liquid Glass */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <Link
                 to={`/products/${featuredProduct.id}`}
-                className="px-6 py-3.5 rounded-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-sm flex items-center gap-2 shadow-lg hover:shadow-amber-500/20 transition-all"
+                className="liquid-glass-btn-accent px-6 py-3.5 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-xl"
               >
-                Khám Phá Áo Kiểu Nữ <ArrowRight className="w-4 h-4" />
+                <span>Xem & Đặt Mua Áo Kiểu</span>
+                <ArrowRight className="w-4 h-4" />
               </Link>
 
-              <Link
-                to="/products?category=nu"
-                className="px-6 py-3.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-sm backdrop-blur-md border border-white/20 transition-all flex items-center gap-2"
+              {/* Nút Bật/Tắt Video Nền Sản Phẩm */}
+              <button
+                onClick={() => setIsProductVideoActive(!isProductVideoActive)}
+                className="liquid-glass-btn px-4 py-3 text-white text-xs font-bold flex items-center gap-2 shadow-lg"
+                title="Bật hoặc tắt video nền sản phẩm nữ"
               >
-                <Play className="w-4 h-4 fill-current text-rose-400" /> Xem Video Trực Tiếp
-              </Link>
+                {isProductVideoActive ? (
+                  <>
+                    <VideoOff className="w-4 h-4 text-rose-400" />
+                    <span>Tắt Video Nền SP</span>
+                  </>
+                ) : (
+                  <>
+                    <Video className="w-4 h-4 text-emerald-400" />
+                    <span>Bật Video Nền SP</span>
+                  </>
+                )}
+              </button>
+
+              {/* Nếu đang bật video, cho phép Mute/Unmute & Play/Pause */}
+              {isProductVideoActive && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={togglePlay}
+                    className="liquid-glass-btn p-3 text-white"
+                    title={isPlaying ? 'Tạm dừng video' : 'Phát tiếp video'}
+                  >
+                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-amber-400 fill-current" />}
+                  </button>
+
+                  <button
+                    onClick={() => setIsProductVideoMuted(!isProductVideoMuted)}
+                    className="liquid-glass-btn p-3 text-white"
+                    title={isProductVideoMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+                  >
+                    {isProductVideoMuted ? <VolumeX className="w-4 h-4 text-neutral-400" /> : <Volume2 className="w-4 h-4 text-amber-400" />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 pt-2 text-xs text-neutral-400">
+              <span>✓ Mã SKU: 479073-COL00</span>
+              <span>•</span>
+              <span>✓ Đủ size S, M, L, XL</span>
+              <span>•</span>
+              <span>✓ Giao nhanh 24h</span>
             </div>
           </div>
 
-          {/* Cột phải: Card sản phẩm nổi bật */}
+          {/* Cột phải: Card sản phẩm nổi bật phong cách Liquid Glass */}
           <div className="lg:col-span-5 hidden lg:block">
-            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-2xl max-w-xs mx-auto">
-              <div className="aspect-[3/4] rounded-xl overflow-hidden relative">
+            <div className="liquid-glass p-4 rounded-sm border border-white/20 shadow-2xl max-w-xs mx-auto">
+              <div className="aspect-[3/4] rounded-xs overflow-hidden relative border border-white/10">
                 <img
                   src="/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif"
                   alt="Nữ Áo Kiểu"
                   className="w-full h-full object-cover"
                 />
-                <span className="absolute top-2 right-2 bg-neutral-950/80 text-white text-[11px] font-bold px-2 py-0.5 rounded-md">
-                  Mã: 479073
+                <span className="absolute top-2 right-2 liquid-glass-btn-dark text-white text-[10px] font-bold px-2 py-0.5">
+                  MÃ: 479073
+                </span>
+                <span className="absolute bottom-2 left-2 liquid-glass-btn text-white text-[10px] font-bold px-2 py-0.5 flex items-center gap-1">
+                  <Play className="w-3 h-3 fill-current text-rose-400" /> 1080p Intro
                 </span>
               </div>
               <div className="pt-3 text-left">
-                <p className="text-xs text-amber-400 font-semibold uppercase">Màu 00 WHITE / 10 BEIGE</p>
+                <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Màu 00 WHITE / 10 BEIGE</p>
                 <h4 className="font-bold text-white text-sm truncate mt-0.5">Áo Kiểu Vải Rayon Cổ Mở</h4>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="font-extrabold text-amber-400 text-base">599.000₫</span>
+                <div className="flex items-center justify-between mt-3">
+                  <span className="font-black text-amber-400 text-base">599.000₫</span>
                   <Link
                     to={`/products/${featuredProduct.id}`}
-                    className="text-xs bg-white text-neutral-900 px-3 py-1 rounded-full font-bold hover:bg-amber-400 transition-colors"
+                    className="liquid-glass-btn px-3 py-1.5 text-white text-xs font-bold"
                   >
                     Xem Ngay
                   </Link>
@@ -87,23 +175,23 @@ export default function HomePage() {
       </section>
 
       {/* Banner Mã Giảm Giá Khách Hàng (Tương ứng bảng coupons trong DB) */}
-      <section className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg">
+      <section className="liquid-glass-btn-accent text-white rounded-sm p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl border border-amber-300/40">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 liquid-glass rounded-sm flex items-center justify-center shrink-0">
             <Tag className="w-6 h-6 text-white" />
           </div>
           <div>
-            <span className="text-xs uppercase tracking-widest font-bold text-amber-200">Ưu đãi thành viên</span>
+            <span className="text-[10px] uppercase tracking-widest font-black text-amber-200">Ưu đãi thành viên CSDL</span>
             <h3 className="text-xl sm:text-2xl font-black">Giảm 10% Cho Đơn Hàng Đầu Tiên</h3>
-            <p className="text-xs text-amber-100 mt-1">Đăng ký tài khoản khách hàng để tích lũy điểm thưởng loyalty sau mỗi đơn hàng.</p>
+            <p className="text-xs text-amber-100 mt-1">Đăng ký tài khoản khách hàng để tích lũy điểm thưởng loyalty sau mỗi đơn hàng thành công.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-neutral-950/30 p-2 pl-4 rounded-xl border border-white/20 shrink-0">
-          <span className="font-mono font-bold tracking-wider text-sm sm:text-base">MÃ: WELCOME10</span>
+        <div className="flex items-center gap-3 liquid-glass-btn-dark p-2 pl-4 rounded-sm border border-white/20 shrink-0">
+          <span className="font-mono font-bold tracking-wider text-xs sm:text-sm text-amber-300">MÃ: WELCOME10</span>
           <Link
             to="/products"
-            className="px-4 py-2 bg-white text-neutral-950 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors"
+            className="px-4 py-2 liquid-glass text-neutral-900 rounded-sm text-xs font-black uppercase tracking-wider"
           >
             Mua Ngay
           </Link>
@@ -115,62 +203,64 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-black text-neutral-900 tracking-tight">Danh Mục Nổi Bật</h2>
-            <p className="text-sm text-neutral-500 mt-1">Lựa chọn trang phục phù hợp với phong cách của bạn</p>
+            <p className="text-xs text-neutral-500 mt-1">Lựa chọn trang phục phù hợp với phong cách và nhu cầu của bạn</p>
           </div>
-          <Link to="/products" className="text-sm font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-1">
-            Xem tất cả <ArrowRight className="w-4 h-4" />
+          <Link to="/products" className="liquid-glass-btn px-3 py-1.5 text-xs font-bold text-neutral-800 flex items-center gap-1">
+            Xem tất cả <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <Link
             to="/products?category=nu"
-            className="group relative rounded-2xl overflow-hidden aspect-[16/10] bg-neutral-100 shadow-md flex items-end p-6"
+            className="group relative rounded-sm overflow-hidden aspect-[16/10] bg-neutral-900 shadow-md flex items-end p-6 border border-neutral-200 hover:shadow-2xl transition-all"
           >
             <img
               src="/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif"
               alt="Thời trang nữ"
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
             <div className="relative z-10 text-white">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-300">Có video sp</span>
-              <h3 className="text-xl font-bold">Thời Trang Nữ</h3>
-              <p className="text-xs text-neutral-300 mt-1">Áo kiểu, váy đầm công sở & dự tiệc</p>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-300 flex items-center gap-1">
+                <Play className="w-3 h-3 fill-current text-rose-400" /> Có video sản phẩm
+              </span>
+              <h3 className="text-xl font-black mt-1">Thời Trang Nữ</h3>
+              <p className="text-xs text-neutral-300 mt-0.5">Áo kiểu Rayon, sơ mi lụa & chân váy</p>
             </div>
           </Link>
 
           <Link
             to="/products?category=nam"
-            className="group relative rounded-2xl overflow-hidden aspect-[16/10] bg-neutral-100 shadow-md flex items-end p-6"
+            className="group relative rounded-sm overflow-hidden aspect-[16/10] bg-neutral-900 shadow-md flex items-end p-6 border border-neutral-200 hover:shadow-2xl transition-all"
           >
             <img
               src="https://images.unsplash.com/photo-1625910513413-7fc2a8d13264?w=600&auto=format&fit=crop&q=80"
               alt="Thời trang nam"
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
             <div className="relative z-10 text-white">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300">Xu hướng</span>
-              <h3 className="text-xl font-bold">Thời Trang Nam</h3>
-              <p className="text-xs text-neutral-300 mt-1">Polo dry pique, sơ mi & jean slim fit</p>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Xu hướng mới</span>
+              <h3 className="text-xl font-black mt-1">Thời Trang Nam</h3>
+              <p className="text-xs text-neutral-300 mt-0.5">Polo Dry Pique, sơ mi Oxford & quần âu</p>
             </div>
           </Link>
 
           <Link
             to="/products?category=unisex"
-            className="group relative rounded-2xl overflow-hidden aspect-[16/10] bg-neutral-100 shadow-md flex items-end p-6"
+            className="group relative rounded-sm overflow-hidden aspect-[16/10] bg-neutral-900 shadow-md flex items-end p-6 border border-neutral-200 hover:shadow-2xl transition-all"
           >
             <img
               src="https://images.unsplash.com/photo-1544441893-675973e31985?w=600&auto=format&fit=crop&q=80"
               alt="Áo khoác & Phụ kiện"
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
             <div className="relative z-10 text-white">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-300">Đa năng</span>
-              <h3 className="text-xl font-bold">Áo Khoác & Unisex</h3>
-              <p className="text-xs text-neutral-300 mt-1">Chống UV, trượt nước siêu nhẹ</p>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Đa năng</span>
+              <h3 className="text-xl font-black mt-1">Áo Khoác & Unisex</h3>
+              <p className="text-xs text-neutral-300 mt-0.5">Chống UV BlockTech, trượt nước siêu nhẹ</p>
             </div>
           </Link>
         </div>
@@ -181,7 +271,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-black text-neutral-900 tracking-tight">Sản Phẩm Đang Được Yêu Thích</h2>
-            <p className="text-sm text-neutral-500 mt-1">Các mẫu trang phục hot nhất tuần này tại Clothes Store</p>
+            <p className="text-xs text-neutral-500 mt-1">Được cập nhật tự động từ kho dữ liệu Clothes Store</p>
           </div>
         </div>
 
@@ -195,4 +285,3 @@ export default function HomePage() {
     </div>
   );
 }
-

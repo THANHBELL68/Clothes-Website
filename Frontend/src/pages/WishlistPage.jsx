@@ -11,7 +11,7 @@ export default function WishlistPage() {
 
   return (
     <div className="space-y-8">
-      <div className="border-b border-neutral-200 pb-4">
+      <div className="border-b border-neutral-200/80 pb-4">
         <h1 className="text-3xl font-black text-neutral-900 tracking-tight flex items-center gap-2">
           <Heart className="w-7 h-7 text-rose-500 fill-current" /> Danh Sách Yêu Thích
         </h1>
@@ -28,16 +28,16 @@ export default function WishlistPage() {
         </div>
       ) : (
         <div className="text-center py-24 max-w-md mx-auto space-y-4">
-          <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto text-rose-400">
+          <div className="w-20 h-20 bg-rose-50 rounded-sm flex items-center justify-center mx-auto text-rose-400">
             <Heart className="w-10 h-10" />
           </div>
-          <h2 className="text-2xl font-bold text-neutral-900">Chưa có sản phẩm yêu thích</h2>
-          <p className="text-sm text-neutral-500">
+          <h2 className="text-2xl font-black text-neutral-900 tracking-tight">Chưa có sản phẩm yêu thích</h2>
+          <p className="text-xs text-neutral-500">
             Hãy bấm biểu tượng trái tim ở các mẫu quần áo bạn thích để lưu lại tại đây!
           </p>
           <Link
             to="/products"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-neutral-900 text-white font-bold text-sm hover:bg-neutral-800 transition-colors"
+            className="liquid-glass-btn-accent inline-flex items-center gap-2 px-6 py-3 text-white font-bold text-xs uppercase tracking-wider"
           >
             Khám phá trang phục <ArrowRight className="w-4 h-4" />
           </Link>
@@ -46,4 +46,3 @@ export default function WishlistPage() {
     </div>
   );
 }
-

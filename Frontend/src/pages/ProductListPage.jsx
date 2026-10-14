@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
 import { PRODUCTS, CATEGORIES } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
 
@@ -41,21 +41,21 @@ export default function ProductListPage() {
     <div className="space-y-8">
       
       {/* Header trang danh sách */}
-      <div className="border-b border-neutral-200 pb-6">
+      <div className="border-b border-neutral-200/80 pb-6">
         <h1 className="text-3xl font-black text-neutral-900 tracking-tight">
           {searchQuery
             ? `Kết quả tìm kiếm cho: "${searchQuery}"`
             : CATEGORIES.find((c) => c.id === currentCategory)?.name || 'Bộ Sưu Tập Trang Phục'}
         </h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          Hiển thị {filteredProducts.length} sản phẩm phù hợp với tiêu chí lọc của bạn
+        <p className="text-xs text-neutral-500 mt-1">
+          Hiển thị {filteredProducts.length} sản phẩm phù hợp với tiêu chí lọc từ cơ sở dữ liệu
         </p>
       </div>
 
-      {/* Categories Pills & Controls */}
+      {/* Categories Pills & Controls góc cạnh Liquid Glass */}
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
         
-        {/* Category Pills */}
+        {/* Category Buttons */}
         <div className="flex flex-wrap gap-2">
           {CATEGORIES.map((cat) => (
             <button
@@ -69,10 +69,10 @@ export default function ProductListPage() {
                 }
                 setSearchParams(nextParams);
               }}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
+              className={`px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${
                 currentCategory === cat.id
-                  ? 'bg-neutral-900 text-white shadow-md'
-                  : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                  ? 'liquid-glass-btn-accent text-white shadow-md'
+                  : 'liquid-glass-btn text-neutral-800 bg-white/70'
               }`}
             >
               {cat.name}
@@ -83,7 +83,7 @@ export default function ProductListPage() {
         {/* Sort & Price Filter controls */}
         <div className="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-end">
           
-          <div className="flex items-center gap-2 text-xs font-medium text-neutral-600">
+          <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 bg-white/80 liquid-glass px-3 py-1.5 rounded-sm border">
             <span>Giá tối đa:</span>
             <input
               type="range"
@@ -94,15 +94,15 @@ export default function ProductListPage() {
               onChange={(e) => setMaxPrice(Number(e.target.value))}
               className="w-24 accent-amber-600"
             />
-            <span className="font-bold text-neutral-900">{(maxPrice / 1000).toLocaleString('vi-VN')}K</span>
+            <span className="font-mono font-black text-neutral-900">{(maxPrice / 1000).toLocaleString('vi-VN')}K</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs">
-            <ArrowUpDown className="w-3.5 h-3.5 text-neutral-400" />
+          <div className="flex items-center gap-1.5 text-xs bg-white/80 liquid-glass px-3 py-1.5 rounded-sm border">
+            <ArrowUpDown className="w-3.5 h-3.5 text-neutral-500" />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-neutral-100 border-none rounded-lg px-3 py-2 text-xs font-semibold text-neutral-800 focus:outline-none"
+              className="bg-transparent border-none text-xs font-bold text-neutral-800 focus:outline-none cursor-pointer"
             >
               <option value="popular">Được đánh giá cao</option>
               <option value="price_asc">Giá: Thấp đến cao</option>
@@ -122,14 +122,14 @@ export default function ProductListPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 bg-neutral-50 rounded-2xl border border-dashed border-neutral-300">
-          <p className="text-neutral-500 font-medium">Không tìm thấy sản phẩm nào phù hợp.</p>
+        <div className="text-center py-20 bg-white/70 liquid-glass rounded-sm border border-neutral-300">
+          <p className="text-neutral-500 text-xs font-bold">Không tìm thấy sản phẩm nào phù hợp với bộ lọc.</p>
           <button
             onClick={() => {
               setMaxPrice(1000000);
               setSearchParams({});
             }}
-            className="mt-4 px-4 py-2 bg-neutral-900 text-white rounded-lg text-xs font-semibold"
+            className="mt-4 px-4 py-2 liquid-glass-btn-accent text-white text-xs font-bold uppercase tracking-wider rounded-sm"
           >
             Đặt lại bộ lọc
           </button>
@@ -139,4 +139,3 @@ export default function ProductListPage() {
     </div>
   );
 }
-
