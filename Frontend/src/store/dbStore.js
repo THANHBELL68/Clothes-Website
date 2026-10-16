@@ -5,7 +5,7 @@ import { PRODUCTS, COUPONS } from '../data/mockData';
 export const useDbStore = create(
   persist(
     (set, get) => ({
-      // Bảng products & product_variants
+      // Bảng products & product_variants (2 sản phẩm chuẩn Nữ & Nam)
       products: PRODUCTS,
 
       // Bảng goods_receipts (Phiếu nhập kho)
@@ -13,12 +13,12 @@ export const useDbStore = create(
         {
           id: 1,
           code: 'PNK-20261010-01',
-          supplier_name: 'Công ty Cổ phần Dệt May Hà Nội',
+          supplier_name: 'Xưởng May Vải Rayon & Giả Lông Cừu Hà Nội',
           created_by: 'Lê Thủ Kho',
           created_at: '2026-10-10T08:30:00Z',
           items: [
-            { variant_id: 101, sku: 'AKN-TRANG-S', quantity: 50, unit_cost: 250000 },
-            { variant_id: 102, sku: 'AKN-TRANG-M', quantity: 50, unit_cost: 250000 },
+            { variant_id: 101, sku: 'AKN-479073-00-S', quantity: 50, unit_cost: 320000 },
+            { variant_id: 202, sku: 'AKN-486116-69-M', quantity: 40, unit_cost: 490000 },
           ],
         },
       ],
@@ -34,7 +34,7 @@ export const useDbStore = create(
           created_by: 'Lê Thủ Kho',
           created_at: '2026-10-12T14:15:00Z',
           items: [
-            { variant_id: 101, sku: 'AKN-TRANG-S', quantity: 1 },
+            { variant_id: 101, sku: 'AKN-479073-00-S', quantity: 1 },
           ],
         },
       ],
@@ -44,7 +44,7 @@ export const useDbStore = create(
         {
           id: 1,
           variant_id: 101,
-          sku: 'AKN-TRANG-S',
+          sku: 'AKN-479073-00-S',
           quantity: 50,
           reason: 'IMPORT',
           ref_type: 'goods_receipt',
@@ -54,12 +54,22 @@ export const useDbStore = create(
         {
           id: 2,
           variant_id: 101,
-          sku: 'AKN-TRANG-S',
+          sku: 'AKN-479073-00-S',
           quantity: -1,
           reason: 'EXPORT',
           ref_type: 'goods_issue',
           created_by: 'Lê Thủ Kho',
           created_at: '2026-10-12T14:15:00Z',
+        },
+        {
+          id: 3,
+          variant_id: 202,
+          sku: 'AKN-486116-69-M',
+          quantity: 40,
+          reason: 'IMPORT',
+          ref_type: 'goods_receipt',
+          created_by: 'Lê Thủ Kho',
+          created_at: '2026-10-10T08:30:00Z',
         },
       ],
 
@@ -83,6 +93,15 @@ export const useDbStore = create(
           status: 'pending',
           created_at: '2026-10-14T09:20:00Z',
         },
+        {
+          id: 3,
+          product_id: 2,
+          user_name: 'Trần Văn Nam',
+          rating: 5,
+          comment: 'Áo khoác lông cừu ấm cực kỳ, đi xe máy cản gió rất tốt.',
+          status: 'approved',
+          created_at: '2026-10-15T15:10:00Z',
+        },
       ],
 
       // Bảng audit_logs (Nhật ký hoạt động hệ thống - chỉ Admin xem)
@@ -100,7 +119,7 @@ export const useDbStore = create(
           user_name: 'Lê Thủ Kho',
           action: 'CREATE_RECEIPT',
           target: 'PNK-20261010-01',
-          detail: 'Nhập kho 100 sản phẩm Áo kiểu nữ Rayon',
+          detail: 'Nhập kho 90 sản phẩm Áo kiểu nữ Rayon & Áo khoác nam lông cừu',
           created_at: '2026-10-10T08:30:00Z',
         },
       ],
@@ -108,9 +127,9 @@ export const useDbStore = create(
       // Bảng system_settings (Cấu hình hệ thống)
       systemSettings: {
         cod_enabled: true,
-        default_shipping_fee: 30000,
+        default_shipping_fee: 50000,
         free_shipping_from: 500000,
-        return_window_days: 7,
+        return_window_days: 30,
         earn_vnd_per_point: 10000,
         point_value_vnd: 1000,
       },
@@ -282,8 +301,7 @@ export const useDbStore = create(
       },
     }),
     {
-      name: 'shop-db-storage',
+      name: 'shop-db-storage-v2', // version bump to ensure new products load cleanly
     }
   )
 );
-

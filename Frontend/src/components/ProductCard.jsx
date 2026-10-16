@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Star, Eye, Play } from 'lucide-react';
+import { Heart, Star, Play } from 'lucide-react';
 import { useWishlistStore } from '../store/wishlistStore';
 
 export default function ProductCard({ product }) {
@@ -10,50 +10,49 @@ export default function ProductCard({ product }) {
   const primaryImage = product.images?.[0] || 'https://via.placeholder.com/600x800';
 
   return (
-    <div className="group relative flex flex-col bg-white/90 liquid-glass rounded-sm overflow-hidden border border-neutral-200/80 hover:shadow-2xl transition-all duration-300">
+    <div className="group relative flex flex-col bg-white border border-neutral-200 transition-all duration-300 hover:shadow-lg">
       
       {/* Product Image Container */}
-      <Link to={`/products/${product.id}`} className="relative aspect-[3/4] bg-neutral-900 overflow-hidden block">
-        {/* Main image */}
+      <Link to={`/products/${product.id}`} className="relative aspect-[3/4] bg-neutral-100 overflow-hidden block">
         <img
           src={primaryImage}
           alt={product.name}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
 
-        {/* Badges góc cạnh */}
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
+        {/* Badges góc vuông tối giản */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
           {product.badge && (
-            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-xs bg-neutral-900 text-white shadow-md">
+            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-neutral-900 text-white">
               {product.badge}
             </span>
           )}
           {product.video && (
-            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-xs bg-rose-600 text-white flex items-center gap-1 shadow-md">
+            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-[#e60012] text-white flex items-center gap-1 shadow-xs">
               <Play className="w-2.5 h-2.5 fill-current" /> Video
             </span>
           )}
         </div>
 
-        {/* Quick View Overlay icon góc cạnh Liquid Glass */}
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <span className="liquid-glass-btn-accent text-white text-xs font-bold px-3 py-1.5 shadow-lg flex items-center gap-1.5 uppercase tracking-wider">
-            <Eye className="w-3.5 h-3.5" /> Xem chi tiết
+        {/* Quick View Overlay on hover */}
+        <div className="absolute inset-0 bg-black/15 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span className="bg-white text-neutral-900 text-xs font-black uppercase tracking-widest px-4 py-2 shadow-md">
+            Xem Chi Tiết
           </span>
         </div>
       </Link>
 
-      {/* Wishlist button góc cạnh Liquid Glass */}
+      {/* Wishlist button */}
       <button
         onClick={(e) => {
           e.preventDefault();
           toggleWishlist(product.id);
         }}
-        className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-xs flex items-center justify-center backdrop-blur-md transition-all z-10 ${
+        className={`absolute top-2 right-2 w-8 h-8 flex items-center justify-center backdrop-blur-md transition-all z-10 ${
           isFav
-            ? 'liquid-glass text-rose-600 border border-rose-300 shadow-md'
-            : 'liquid-glass text-neutral-700 hover:text-rose-600 shadow-xs'
+            ? 'bg-white text-[#e60012] shadow-sm'
+            : 'bg-white/80 text-neutral-600 hover:bg-white hover:text-black shadow-xs'
         }`}
         title={isFav ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
       >
@@ -61,10 +60,10 @@ export default function ProductCard({ product }) {
       </button>
 
       {/* Product Information */}
-      <div className="p-3.5 flex flex-col flex-1">
+      <div className="p-4 flex flex-col flex-1 space-y-2">
         
         {/* Color swatches */}
-        <div className="flex items-center gap-1.5 mb-2">
+        <div className="flex items-center gap-1.5">
           {product.variants?.reduce((acc, v) => {
             if (!acc.find(item => item.color === v.color)) {
               acc.push(v);
@@ -73,7 +72,7 @@ export default function ProductCard({ product }) {
           }, []).slice(0, 4).map((variant) => (
             <span
               key={variant.id}
-              className={`w-3.5 h-3.5 rounded-xs border ${variant.border ? 'border-neutral-300' : 'border-transparent'}`}
+              className={`w-3.5 h-3.5 border ${variant.border ? 'border-neutral-400' : 'border-transparent'}`}
               style={{ backgroundColor: variant.color_code || '#ccc' }}
               title={variant.color}
             />
@@ -83,13 +82,13 @@ export default function ProductCard({ product }) {
           )}
         </div>
 
-        <p className="text-[10px] font-black uppercase tracking-wider text-amber-700 mb-1">
+        <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">
           {product.category_name}
         </p>
 
         <Link
           to={`/products/${product.id}`}
-          className="font-bold text-xs sm:text-sm text-neutral-900 group-hover:text-amber-600 line-clamp-2 transition-colors mb-2 leading-snug flex-1"
+          className="font-bold text-sm text-neutral-900 hover:text-[#e60012] line-clamp-2 transition-colors leading-snug flex-1"
         >
           {product.name}
         </Link>

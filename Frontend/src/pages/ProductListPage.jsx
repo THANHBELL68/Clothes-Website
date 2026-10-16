@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ArrowUpDown } from 'lucide-react';
-import { PRODUCTS, CATEGORIES } from '../data/mockData';
+import { CATEGORIES } from '../data/mockData';
+import { useDbStore } from '../store/dbStore';
 import ProductCard from '../components/ProductCard';
 
 export default function ProductListPage() {
@@ -10,10 +11,12 @@ export default function ProductListPage() {
   const searchQuery = searchParams.get('search') || '';
 
   const [sortBy, setSortBy] = useState('popular'); // 'popular' | 'price_asc' | 'price_desc'
-  const [maxPrice, setMaxPrice] = useState(1000000);
+  const [maxPrice, setMaxPrice] = useState(1500000);
+
+  const products = useDbStore((state) => state.products);
 
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((item) => {
+    return products.filter((item) => {
       // Lọc danh mục
       if (currentCategory !== 'all' && item.category_id !== currentCategory) {
         return false;
@@ -33,30 +36,30 @@ export default function ProductListPage() {
     }).sort((a, b) => {
       if (sortBy === 'price_asc') return a.price - b.price;
       if (sortBy === 'price_desc') return b.price - a.price;
-      return b.rating - a.rating; // Phổ biến / đánh giá cao
+      return b.rating - a.rating;
     });
-  }, [currentCategory, searchQuery, sortBy, maxPrice]);
+  }, [products, currentCategory, searchQuery, sortBy, maxPrice]);
 
   return (
     <div className="space-y-8">
       
       {/* Header trang danh sách */}
-      <div className="border-b border-neutral-200/80 pb-6">
-        <h1 className="text-3xl font-black text-neutral-900 tracking-tight">
+      <div className="border-b border-neutral-200 pb-4">
+        <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight">
           {searchQuery
             ? `Kết quả tìm kiếm cho: "${searchQuery}"`
             : CATEGORIES.find((c) => c.id === currentCategory)?.name || 'Bộ Sưu Tập Trang Phục'}
         </h1>
         <p className="text-xs text-neutral-500 mt-1">
-          Hiển thị {filteredProducts.length} sản phẩm phù hợp với tiêu chí lọc từ cơ sở dữ liệu
+          Hiển thị {filteredProducts.length} sản phẩm phù hợp trong hệ thống
         </p>
       </div>
 
-      {/* Categories Pills & Controls góc cạnh Liquid Glass */}
+      {/* Categories Buttons & Controls */}
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
         
         {/* Category Buttons */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
@@ -69,10 +72,10 @@ export default function ProductListPage() {
                 }
                 setSearchParams(nextParams);
               }}
-              className={`px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${
+              className={`px-4 py-2 text-xs font-black tracking-wider transition-all border ${
                 currentCategory === cat.id
-                  ? 'liquid-glass-btn-accent text-white shadow-md'
-                  : 'liquid-glass-btn text-neutral-800 bg-white/70'
+                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
+                  : 'bg-white text-neutral-700 border-neutral-300 hover:border-neutral-700'
               }`}
             >
               {cat.name}
@@ -83,21 +86,21 @@ export default function ProductListPage() {
         {/* Sort & Price Filter controls */}
         <div className="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-end">
           
-          <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 bg-white/80 liquid-glass px-3 py-1.5 rounded-sm border">
+          <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 bg-neutral-50 px-3 py-1.5 border border-neutral-200">
             <span>Giá tối đa:</span>
             <input
               type="range"
               min="200000"
-              max="1000000"
+              max="1500000"
               step="50000"
               value={maxPrice}
               onChange={(e) => setMaxPrice(Number(e.target.value))}
-              className="w-24 accent-amber-600"
+              className="w-24 accent-[#e60012]"
             />
             <span className="font-mono font-black text-neutral-900">{(maxPrice / 1000).toLocaleString('vi-VN')}K</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs bg-white/80 liquid-glass px-3 py-1.5 rounded-sm border">
+          <div className="flex items-center gap-1.5 text-xs bg-neutral-50 px-3 py-1.5 border border-neutral-200">
             <ArrowUpDown className="w-3.5 h-3.5 text-neutral-500" />
             <select
               value={sortBy}
@@ -122,14 +125,14 @@ export default function ProductListPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white/70 liquid-glass rounded-sm border border-neutral-300">
+        <div className="text-center py-20 bg-neutral-50 border border-neutral-200">
           <p className="text-neutral-500 text-xs font-bold">Không tìm thấy sản phẩm nào phù hợp với bộ lọc.</p>
           <button
             onClick={() => {
-              setMaxPrice(1000000);
+              setMaxPrice(1500000);
               setSearchParams({});
             }}
-            className="mt-4 px-4 py-2 liquid-glass-btn-accent text-white text-xs font-bold uppercase tracking-wider rounded-sm"
+            className="mt-4 px-4 py-2 bg-neutral-900 text-white text-xs font-black uppercase tracking-wider"
           >
             Đặt lại bộ lọc
           </button>
