@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
+import LiveChatWidget from './components/LiveChatWidget';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -26,110 +27,106 @@ import AdminDashboard from './pages/AdminDashboard';
 
 function AppContent() {
   const location = useLocation();
-  const isHome = location.pathname === '/';
+  const isAetherTheme =
+    ['/', '/checkout', '/orders'].includes(location.pathname) ||
+    location.pathname.startsWith('/products/') ||
+    location.pathname.startsWith('/admin');
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans overflow-x-hidden selection:bg-[#e60012] selection:text-white ${isHome ? 'bg-[#0a0a0f] text-white' : 'bg-white text-neutral-900'}`}>
-      
-      {/* Navigation Bar */}
-      <Navbar />
+    <div
+      className={`min-h-screen flex flex-col font-sans overflow-x-hidden selection:bg-[#fafafa] selection:text-[#080808] ${
+        isAetherTheme ? 'bg-[#080808] text-[#fafafa]' : 'bg-white text-neutral-900'
+      }`}
+    >
+      {/* Navigation Bar (Chỉ hiển thị cho các trang con theme sáng, trang Aether tự quản lý Navbar) */}
+      {!isAetherTheme && <Navbar />}
 
       {/* Main Content Area */}
-      <main className={`flex-1 w-full ${isHome ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/products" element={<ProductListPage />} />
-            <Route path="/products/:id" element={<ProductDetailPage />} />
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
+      <main className={`flex-1 w-full ${isAetherTheme ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
+        <Routes>
+          {/* Public Storefront Routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/products" element={<ProductListPage />} />
+          <Route path="/products/:id" element={<ProductDetailPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
 
-            {/* Đăng nhập riêng cho Người Mua / Vãng Lai (Không thấy vai trò nội bộ) */}
-            <Route path="/login" element={<CustomerAuthPage />} />
-            <Route path="/customer/login" element={<CustomerAuthPage />} />
+          {/* Checkout & Orders: Hỗ trợ cả Khách Thành Viên và Khách Vãng Lai theo Trigger DB */}
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/orders" element={<OrdersPage />} />
 
-            {/* Đăng nhập riêng cho Nhân Sự Nội Bộ: Warehouse, CSKH, Admin (Không thấy phần khách vãng lai) */}
-            <Route path="/staff/login" element={<StaffAuthPage />} />
-            <Route path="/admin/login" element={<StaffAuthPage />} />
+          {/* Đăng nhập riêng cho Người Mua / Vãng Lai (Không thấy vai trò nội bộ) */}
+          <Route path="/login" element={<CustomerAuthPage />} />
+          <Route path="/customer/login" element={<CustomerAuthPage />} />
 
-            {/* Protected Customer Routes */}
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute allowedRoles={['customer']}>
-                  <CheckoutPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/orders"
-              element={
-                <ProtectedRoute allowedRoles={['customer']}>
-                  <OrdersPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute allowedRoles={['customer']}>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
+          {/* Đăng nhập riêng cho Nhân Sự Nội Bộ: Warehouse, CSKH, Admin (Không thấy phần khách vãng lai) */}
+          <Route path="/staff/login" element={<StaffAuthPage />} />
+          <Route path="/admin/login" element={<StaffAuthPage />} />
 
-            {/* Protected Staff Dashboards (Liên kết CSDL động) */}
-            <Route
-              path="/warehouse"
-              element={
-                <ProtectedRoute allowedRoles={['warehouse', 'admin']}>
-                  <WarehouseDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cskh"
-              element={
-                <ProtectedRoute allowedRoles={['cskh', 'admin']}>
-                  <CskhDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+          {/* Protected Customer Routes */}
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={['customer', 'CUSTOMER']}>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
+          {/* Protected Staff Dashboards (Liên kết CSDL động) */}
+          <Route
+            path="/warehouse"
+            element={
+              <ProtectedRoute allowedRoles={['warehouse', 'admin', 'WAREHOUSE_MANAGER', 'SUPER_ADMIN']}>
+                <WarehouseDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cskh"
+            element={
+              <ProtectedRoute allowedRoles={['cskh', 'admin', 'CS_STAFF', 'SUPER_ADMIN']}>
+                <CskhDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'cskh', 'warehouse', 'SUPER_ADMIN', 'CS_STAFF', 'WAREHOUSE_MANAGER']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Footer */}
-        <Footer />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
 
-        {/* Toast Notification Container */}
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 3500,
-            style: {
-              background: '#18181b',
-              color: '#ffffff',
-              fontSize: '13px',
-              borderRadius: '2px',
-              border: '1px solid #27272a',
-              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.25)',
-              padding: '12px 18px',
-            },
-          }}
-        />
+      {/* Footer (Chỉ hiển thị cho các trang con theme sáng) */}
+      {!isAetherTheme && <Footer />}
 
-      </div>
+      {/* Floating Live Chat Widget (kết nối chat_conversations & chat_messages, yêu cầu guest_name & guest_contact với khách chưa đăng nhập) */}
+      <LiveChatWidget />
+
+      {/* Toast Notification Container */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            background: '#18181b',
+            color: '#ffffff',
+            fontSize: '13px',
+            borderRadius: '2px',
+            border: '1px solid #27272a',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.25)',
+            padding: '12px 18px',
+          },
+        }}
+      />
+    </div>
   );
 }
 

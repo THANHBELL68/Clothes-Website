@@ -1,128 +1,120 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Volume2,
-  VolumeX,
-  Pause,
-  Play,
   ArrowDown,
+  ArrowRight,
+  Shield,
+  Layers,
+  Wind,
+  Droplets,
+  Plus,
+  Check,
+  Maximize2,
+  Sparkles,
+  ExternalLink,
+  Star,
+  RotateCcw,
   ShoppingBag,
   Heart,
-  Star,
-  Sparkles,
-  ShieldCheck,
-  Truck,
-  RotateCcw,
-  Layers,
-  ChevronRight,
-  Eye,
-  Sliders,
-  CheckCircle2,
-  Video,
-  VideoOff,
+  SlidersHorizontal,
 } from 'lucide-react';
-import { useDbStore } from '../store/dbStore';
+import AetherNavbar from '../components/AetherNavbar';
+import AetherStickySidebar from '../components/AetherStickySidebar';
+import AetherCartDrawer from '../components/AetherCartDrawer';
+import AetherSearchModal from '../components/AetherSearchModal';
+import AetherQuickViewModal from '../components/AetherQuickViewModal';
 import { useCartStore } from '../store/cartStore';
-import { useWishlistStore } from '../store/wishlistStore';
+import {
+  MOCK_CATEGORIES,
+  MOCK_SIZES,
+  MOCK_COLORS,
+  MOCK_MATERIALS,
+  MOCK_PRODUCTS_WITH_DETAILS,
+  MOCK_INVENTORY_AVAILABLE,
+  MOCK_PRODUCT_RATINGS,
+  formatVND,
+} from '../data/mockData';
+import {
+  HERO_FLOATING_CARDS,
+  CRAFTSMANSHIP_PILLARS,
+  COMMUNITY_FIT_CHECKS,
+  MARQUEE_ITEMS,
+} from '../data/aetherData';
 import toast from 'react-hot-toast';
+
+// Chương trình khuyến mãi đang chạy (now() BETWEEN start_at AND end_at)
+const ACTIVE_PROMOTIONS = [
+  { id: 1, name: 'MÙA ĐÔNG FW/26', discount_percent: 10, product_ids: [1, 3] },
+];
 
 export default function HomePage() {
   const navigate = useNavigate();
 
-  // Đọc sản phẩm và đánh giá trực tiếp từ CSDL động (dbStore)
-  const products = useDbStore((state) => state.products);
-  const allReviews = useDbStore((state) => state.reviews);
-  const addToCart = useCartStore((state) => state.addToCart);
-  const { isInWishlist, toggleWishlist } = useWishlistStore();
+  // Store giỏ hàng & sản phẩm yêu thích
+  const cartItemsStore = useCartStore((state) => state.items);
+  const addToCartStore = useCartStore((state) => state.addToCart);
+  const updateQuantityStore = useCartStore((state) => state.updateQuantity);
+  const removeFromCartStore = useCartStore((state) => state.removeFromCart);
 
-  // Chỉ lấy các đánh giá đã được CSKH phê duyệt
-  const approvedReviews = useMemo(
-    () => allReviews.filter((r) => r.status === 'approved'),
-    [allReviews]
-  );
+  // Danh sách Wishlist lưu cục bộ
+  const [wishlist, setWishlist] = useState([1, 4]);
 
-  // Bộ lọc danh mục: 'all' | 'nu' | 'nam'
-  const [selectedFilter, setSelectedFilter] = useState('all');
-
-  // Điều khiển Video Nền Đầu Trang (site_bg.mp4)
-  const bgVideoRef = useRef(null);
-  const [isBgVideoPlaying, setIsBgVideoPlaying] = useState(true);
-  const [isBgVideoMuted, setIsBgVideoMuted] = useState(true);
-  const [showBgVideo, setShowBgVideo] = useState(true);
-
-  // Section Tracking cho thanh điều hướng dọc (ArtCraft Style)
+  // Section theo dõi hiện tại cho Right Sticky Sidebar
   const [activeSection, setActiveSection] = useState('hero');
 
-  // Quản lý biến thể đang chọn cho từng sản phẩm trên trang chủ
-  // Sản phẩm 1 (Nữ): Rayon 479073
-  const productNu = products.find((p) => p.category_id === 'nu') || products[0];
-  const [nuColor, setNuColor] = useState(productNu?.variants?.[0]?.color || '00 WHITE');
-  const [nuSize, setNuSize] = useState(productNu?.variants?.[0]?.size || 'M');
-  const [nuQty, setNuQty] = useState(1);
-  const [nuVideoActive, setNuVideoActive] = useState(true);
-  const [nuVideoMuted, setNuVideoMuted] = useState(true);
-  const [nuVideoPlaying, setNuVideoPlaying] = useState(true);
+  // Modals state
+  const [cartOpen, setCartOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [inspectGarment, setInspectGarment] = useState(null);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
-  // Sản phẩm 2 (Nam): Lông cừu 486116
-  const productNam = products.find((p) => p.category_id === 'nam') || products[1] || products[0];
-  const [namColor, setNamColor] = useState(productNam?.variants?.[0]?.color || '69 NAVY');
-  const [namSize, setNamSize] = useState(productNam?.variants?.[0]?.size || 'L');
-  const [namQty, setNamQty] = useState(1);
-  const [namVideoActive, setNamVideoActive] = useState(true);
-  const [namVideoMuted, setNamVideoMuted] = useState(true);
-  const [namVideoPlaying, setNamVideoPlaying] = useState(true);
+  // Bộ lọc Catalog (Section 01 / CATALOG GRID)
+  const [selectedCategory, setSelectedCategory] = useState(null); // slug hoặc null
+  const [selectedSize, setSelectedSize] = useState(null); // 'S', 'M', 'L', 'XL', '29', '30', '31'
+  const [selectedColorId, setSelectedColorId] = useState(null); // number ID
+  const [selectedMaterialName, setSelectedMaterialName] = useState(null); // 'Cotton', 'Denim', etc.
 
-  // Lấy biến thể hiện tại tương ứng với Color + Size
-  const currentVariantNu = useMemo(() => {
-    return productNu?.variants?.find((v) => v.color === nuColor && v.size === nuSize) || productNu?.variants?.[0];
-  }, [productNu, nuColor, nuSize]);
+  // State màu sắc đang được chọn cho từng ô sản phẩm trên Grid (productId -> colorId)
+  const [cardSelectedColor, setCardSelectedColor] = useState({
+    1: 1, // Áo thun basic -> Màu Đen (#000000)
+    2: 3, // Quần jean slim -> Màu Xanh (#1F3A93)
+    3: 2, // Áo kiểu Rayon -> Màu Trắng (#FFFFFF)
+    4: 5, // Áo khoác lông cừu -> Màu Navy (#1E293B)
+  });
 
-  const currentVariantNam = useMemo(() => {
-    return productNam?.variants?.find((v) => v.color === namColor && v.size === namSize) || productNam?.variants?.[0];
-  }, [productNam, namColor, namSize]);
+  // Tính tổng số lượng trong giỏ hàng
+  const totalCartCount = useMemo(() => {
+    return cartItemsStore.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  }, [cartItemsStore]);
 
-  // Điều khiển video nền site_bg
-  const toggleBgVideoPlayback = () => {
-    if (bgVideoRef.current) {
-      if (isBgVideoPlaying) {
-        bgVideoRef.current.pause();
-        setIsBgVideoPlaying(false);
-      } else {
-        bgVideoRef.current.play();
-        setIsBgVideoPlaying(true);
-      }
-    }
-  };
-
-  const toggleBgVideoMute = () => {
-    if (bgVideoRef.current) {
-      bgVideoRef.current.muted = !isBgVideoMuted;
-      setIsBgVideoMuted(!isBgVideoMuted);
-    }
-  };
-
-  // Cuộn trang mượt đến từng mục
-  const scrollTo = (id) => {
+  // Cuộn trang mượt
+  const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
-      setActiveSection(id);
     }
   };
 
-  // Theo dõi vị trí cuộn để đổi activeSection trên thanh tracker bên phải
+  // Lắng nghe scroll để cập nhật activeSection cho Right Sidebar (HERO, CATALOG, CRAFTSMANSHIP, REVIEWS, FOOTER)
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['hero', 'products', 'statement', 'reviews'];
-      const scrollPos = window.scrollY + window.innerHeight / 3;
+      const scrollY = window.scrollY + window.innerHeight / 3;
+      const sections = [
+        { id: 'hero' },
+        { id: 'catalog' },
+        { id: 'craftsmanship' },
+        { id: 'reviews' },
+        { id: 'footer' },
+      ];
 
-      for (const sectionId of sections) {
-        const el = document.getElementById(sectionId);
+      for (const sec of sections) {
+        const el = document.getElementById(sec.id);
         if (el) {
           const top = el.offsetTop;
           const height = el.offsetHeight;
-          if (scrollPos >= top && scrollPos < top + height) {
-            setActiveSection(sectionId);
+          if (scrollY >= top && scrollY < top + height) {
+            setActiveSection(sec.id);
             break;
           }
         }
@@ -133,1123 +125,1015 @@ export default function HomePage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Xử lý thêm sản phẩm Nữ vào giỏ
-  const handleAddToCartNu = () => {
-    if (!currentVariantNu || currentVariantNu.stock <= 0) {
-      toast.error('Sản phẩm tạm thời hết hàng trong kho!');
-      return;
-    }
-    addToCart({
-      variant_id: currentVariantNu.id,
-      product_id: productNu.id,
-      name: productNu.name,
-      size: currentVariantNu.size,
-      color: currentVariantNu.color,
-      price: productNu.price,
-      image: productNu.images[0],
-      stock: currentVariantNu.stock,
-      quantity: nuQty,
+  // Phím tắt ⌘K mở tìm kiếm
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Lọc sản phẩm theo Category, Size, Color, Material
+  const filteredProducts = useMemo(() => {
+    return MOCK_PRODUCTS_WITH_DETAILS.filter((prod) => {
+      // 1. Lọc theo Danh mục (categories.slug)
+      if (selectedCategory && prod.category?.slug !== selectedCategory) {
+        return false;
+      }
+
+      // 2. Lọc theo Kích thước (sizes.name)
+      if (selectedSize) {
+        const hasSize = prod.variants.some((v) => {
+          const sName = v.size?.name || v.size;
+          return sName === selectedSize;
+        });
+        if (!hasSize) return false;
+      }
+
+      // 3. Lọc theo Màu sắc (colors.id)
+      if (selectedColorId) {
+        const hasColor = prod.variants.some((v) => {
+          const cId = v.color_id || v.color?.id;
+          return cId === selectedColorId;
+        });
+        if (!hasColor) return false;
+      }
+
+      // 4. Lọc theo Chất liệu (materials.name)
+      if (selectedMaterialName) {
+        const hasMaterial = prod.variants.some((v) => {
+          const mName = v.material?.name || v.material;
+          return mName?.toLowerCase().includes(selectedMaterialName.toLowerCase());
+        });
+        if (!hasMaterial) return false;
+      }
+
+      return true;
     });
-    toast.success(`Đã thêm ${nuQty} áo Rayon Nữ vào giỏ hàng!`);
+  }, [selectedCategory, selectedSize, selectedColorId, selectedMaterialName]);
+
+  // Đổi màu sắc hiển thị của một thẻ sản phẩm
+  const handleSelectCardColor = (productId, colorId) => {
+    setCardSelectedColor((prev) => ({
+      ...prev,
+      [productId]: colorId,
+    }));
   };
 
-  // Xử lý thêm sản phẩm Nam vào giỏ
-  const handleAddToCartNam = () => {
-    if (!currentVariantNam || currentVariantNam.stock <= 0) {
-      toast.error('Sản phẩm tạm thời hết hàng trong kho!');
-      return;
+  // Lấy ảnh hiển thị theo màu/biến thể đã chọn (product_images.variant_id)
+  const getProductDisplayImage = (product) => {
+    const activeColorId = cardSelectedColor[product.id];
+    if (activeColorId) {
+      const variantWithColor = product.variants.find((v) => (v.color_id || v.color?.id) === activeColorId);
+      if (variantWithColor) {
+        const imgByVariant = product.images.find((img) => img.variant_id === variantWithColor.id);
+        if (imgByVariant) return imgByVariant.url;
+      }
     }
-    addToCart({
-      variant_id: currentVariantNam.id,
-      product_id: productNam.id,
-      name: productNam.name,
-      size: currentVariantNam.size,
-      color: currentVariantNam.color,
-      price: productNam.price,
-      image: productNam.images[0],
-      stock: currentVariantNam.stock,
-      quantity: namQty,
-    });
-    toast.success(`Đã thêm ${namQty} áo Khoác Lông Cừu Nam vào giỏ hàng!`);
+    return product.images[0]?.url || product.images[0] || '/placeholder.jpg';
   };
+
+  // Thêm nhanh vào giỏ hàng
+  const handleQuickAdd = (product) => {
+    const activeColorId = cardSelectedColor[product.id];
+    const targetVariant =
+      product.variants.find((v) => (v.color_id || v.color?.id) === activeColorId) ||
+      product.variants[0];
+
+    const sizeName = targetVariant?.size?.name || targetVariant?.size || 'M';
+    const colorName = targetVariant?.color?.name || targetVariant?.color || 'Đen';
+    const displayImg = getProductDisplayImage(product);
+    const stockAvailable =
+      targetVariant?.inventory?.quantity_available ?? targetVariant?.stock ?? 30;
+
+    addToCartStore({
+      variant_id: targetVariant.id,
+      product_id: product.id,
+      name: product.name,
+      sku: targetVariant.sku,
+      size: sizeName,
+      color: colorName,
+      price: targetVariant.price || product.base_price,
+      image: displayImg,
+      stock: stockAvailable,
+      quantity: 1,
+    });
+
+    toast.success(`[ĐÃ THÊM] ${product.name} (${sizeName} - ${colorName})`, {
+      style: {
+        background: '#080808',
+        color: '#fafafa',
+        border: '1px solid #27272a',
+        fontFamily: 'JetBrains Mono',
+        fontSize: '11px',
+      },
+    });
+  };
+
+  // Bật/tắt wishlist
+  const toggleWishlist = (productId) => {
+    setWishlist((prev) => {
+      const exists = prev.includes(productId);
+      const updated = exists ? prev.filter((id) => id !== productId) : [...prev, productId];
+      toast(exists ? '[ĐÃ XÓA KHỎI WISHLIST]' : '[ĐÃ LƯU VÀO WISHLIST]', {
+        style: {
+          background: '#080808',
+          color: '#fafafa',
+          border: '1px solid #27272a',
+          fontFamily: 'JetBrains Mono',
+          fontSize: '11px',
+        },
+      });
+      return updated;
+    });
+  };
+
+  // Reset bộ lọc
+  const resetFilters = () => {
+    setSelectedCategory(null);
+    setSelectedSize(null);
+    setSelectedColorId(null);
+    setSelectedMaterialName(null);
+  };
+
+  const hasActiveFilters =
+    Boolean(selectedCategory) ||
+    Boolean(selectedSize) ||
+    Boolean(selectedColorId) ||
+    Boolean(selectedMaterialName);
 
   return (
-    <div className="relative w-full bg-[#0a0a0f] text-neutral-100 overflow-hidden select-none">
+    <div className="relative w-full min-h-screen bg-[#080808] text-[#fafafa] font-inter overflow-x-hidden selection:bg-[#fafafa] selection:text-[#080808]">
+      
+      {/* 1. TOP NAVBAR (1PX GRID) */}
+      <AetherNavbar
+        categories={MOCK_CATEGORIES}
+        activeCategory={selectedCategory}
+        onSelectCategory={(slug) => setSelectedCategory(slug)}
+        cartCount={totalCartCount}
+        wishlistCount={wishlist.length}
+        onOpenCart={() => setCartOpen(true)}
+        onOpenSearch={() => setSearchOpen(true)}
+        onScrollToSection={scrollToSection}
+      />
+
+      {/* RIGHT STICKY SIDEBAR (5 SECTIONS: HERO, CATALOG, CRAFTSMANSHIP, REVIEWS, FOOTER) */}
+      <AetherStickySidebar
+        activeSection={activeSection}
+        onScrollToSection={scrollToSection}
+      />
 
       {/* =========================================================================
-          THANH ĐIỀU HƯỚNG DỌC CỐ ĐỊNH MÉP PHẢI (ARTCRAFT STICKY TRACKER)
-      ========================================================================== */}
-      <aside className="fixed right-4 sm:right-6 top-1/2 -translate-y-1/2 z-40 hidden md:flex flex-col items-end gap-3 pointer-events-auto">
-        <div className="p-2.5 rounded-2xl bg-[#14141e]/85 backdrop-blur-xl border border-white/10 shadow-2xl flex flex-col gap-3">
-          {[
-            { id: 'hero', label: 'TỔNG QUAN', num: '01' },
-            { id: 'products', label: 'BỘ SƯU TẬP', num: '02' },
-            { id: 'statement', label: 'CHẤT LIỆU', num: '03' },
-            { id: 'reviews', label: 'ĐÁNH GIÁ', num: '04' },
-          ].map((sec) => (
-            <button
-              key={sec.id}
-              onClick={() => scrollTo(sec.id)}
-              className="group flex items-center justify-end gap-2.5 text-[11px] font-mono tracking-wider transition-all"
-            >
-              <span
-                className={`hidden group-hover:inline-block px-2 py-0.5 rounded-md bg-white/10 text-white text-[10px] uppercase font-bold tracking-widest backdrop-blur-md transition-opacity duration-200 ${
-                  activeSection === sec.id ? 'inline-block text-amber-400' : 'text-neutral-400'
-                }`}
-              >
-                {sec.num} // {sec.label}
-              </span>
-              <div
-                className={`transition-all duration-300 rounded-full flex items-center justify-center ${
-                  activeSection === sec.id
-                    ? 'w-6 h-6 bg-[#e60012] text-white font-bold text-[10px] shadow-lg shadow-rose-900/50 scale-110'
-                    : 'w-2 h-2 bg-neutral-600 group-hover:bg-neutral-300 group-hover:scale-125'
-                }`}
-              >
-                {activeSection === sec.id && sec.num}
-              </div>
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      {/* =========================================================================
-          HERO BANNER: ARTCRAFT AESTHETIC VỚI SITE_BG VÀ 4 CARDS QUỸ ĐẠO BAY LƠ LỬNG
+          2. HERO SECTION (FLOATING LOOKBOOK - GETARTCRAFT PARALLAX)
       ========================================================================== */}
       <section
         id="hero"
-        className="relative min-h-[92vh] sm:min-h-screen w-full flex flex-col items-center justify-center px-4 pt-12 pb-20 overflow-hidden"
+        className="relative min-h-screen w-full flex items-center justify-center px-4 pt-20 pb-16 overflow-hidden border-b border-zinc-800"
       >
-        {/* Lớp nền video site_bg có bật/tắt */}
-        {showBgVideo ? (
-          <div className="absolute inset-0 z-0 overflow-hidden">
-            <video
-              ref={bgVideoRef}
-              src="/site_bg.mp4"
-              autoPlay
-              loop
-              muted={isBgVideoMuted}
-              playsInline
-              className="w-full h-full object-cover object-center filter brightness-[0.45] contrast-[1.15]"
-            />
-            {/* Lưới phủ ma trận nhẹ kiểu ArtCraft */}
-            <div
-              className="absolute inset-0 bg-radial from-transparent via-[#0a0a0f]/60 to-[#0a0a0f] pointer-events-none"
-            />
-            <div
-              className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none"
-            />
-          </div>
-        ) : (
-          <div className="absolute inset-0 z-0 bg-radial from-[#181824] via-[#0f0f16] to-[#0a0a0f]">
-            <div
-              className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none"
-            />
-          </div>
-        )}
+        {/* Subtle Tech Grid Background */}
+        <div className="absolute inset-0 bg-grid-tech pointer-events-none opacity-40" />
 
-        {/* Nút điều khiển video nền góc trái bên dưới (ArtCraft floating audio & video pill) */}
-        <div className="absolute left-4 sm:left-8 bottom-8 z-30 flex items-center gap-2 p-1.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 text-xs text-neutral-300 shadow-2xl">
-          <button
-            onClick={toggleBgVideoPlayback}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center transition-all"
-            title={isBgVideoPlaying ? 'Tạm dừng video nền' : 'Tiếp tục phát'}
-          >
-            {isBgVideoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current text-amber-400" />}
-          </button>
-
-          <button
-            onClick={toggleBgVideoMute}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center transition-all"
-            title={isBgVideoMuted ? 'Bật âm thanh nền' : 'Tắt tiếng video nền'}
-          >
-            {isBgVideoMuted ? <VolumeX className="w-3.5 h-3.5 text-neutral-400" /> : <Volume2 className="w-3.5 h-3.5 text-amber-400" />}
-          </button>
-
-          <button
-            onClick={() => setShowBgVideo(!showBgVideo)}
-            className="px-3 py-1 text-[11px] font-bold rounded-full bg-white/10 hover:bg-white/20 transition-all flex items-center gap-1.5"
-            title="Bật / tắt lớp video nền"
-          >
-            {showBgVideo ? <Video className="w-3 h-3 text-[#e60012]" /> : <VideoOff className="w-3 h-3 text-neutral-400" />}
-            <span className="hidden sm:inline">{showBgVideo ? 'Video Nền' : 'Nền Tối'}</span>
-          </button>
-        </div>
-
-        {/* ===================================================================
-            4 FLOATING ORBIT CARDS (ARTCRAFT SIGNATURE)
-        ==================================================================== */}
-
-        {/* Card 1: Top-Left (Nữ Rayon Preview với Video thumbnail lơ lửng) */}
-        <div className="hidden xl:block absolute top-20 left-12 2xl:left-24 z-20 animate-float">
-          <div
-            onClick={() => scrollTo('products')}
-            className="group cursor-pointer neo-card p-2.5 rounded-xl w-60 transition-all hover:scale-105 border border-white/20 hover:border-amber-400/60 shadow-2xl"
-          >
-            <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-900 border border-white/10 mb-2">
-              <video
-                src="/images/products/nu_demo/san_pham1/video_intro.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[#e60012] text-white">
-                01 / NỮ RAYON
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs px-1">
-              <span className="font-bold text-white truncate max-w-[130px]">Áo Kiểu Vải Rayon</span>
-              <span className="font-mono font-bold text-amber-400">599.000₫</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-[10px] text-neutral-400 px-1 font-mono">
-              <span>S, M, L, XL</span>
-              <span className="text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Còn hàng
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Top-Right (Nam Lông Cừu Preview với Video thumbnail lơ lửng) */}
-        <div className="hidden xl:block absolute top-20 right-12 2xl:right-24 z-20 animate-float-reverse">
-          <div
-            onClick={() => scrollTo('products')}
-            className="group cursor-pointer neo-card p-2.5 rounded-xl w-60 transition-all hover:scale-105 border border-white/20 hover:border-sky-400/60 shadow-2xl"
-          >
-            <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-900 border border-white/10 mb-2">
-              <video
-                src="/images/products/nam_demo/san_pham1/video_intro_nam.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-              <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-neutral-900 text-white border border-white/30">
-                02 / NAM LÔNG CỪU
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs px-1">
-              <span className="font-bold text-white truncate max-w-[130px]">Khoác Lông Cừu</span>
-              <span className="font-mono font-bold text-amber-400">899.000₫</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-[10px] text-neutral-400 px-1 font-mono">
-              <span>Cản gió cao cấp</span>
-              <span className="text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Sẵn sàng giao
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Bottom-Left (Thông số chất liệu tái chế 24%) */}
-        <div className="hidden xl:block absolute bottom-28 left-16 2xl:left-32 z-20 animate-float-slow">
-          <div className="neo-card p-3 rounded-xl border border-white/15 flex items-center gap-3 shadow-xl">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div className="text-left font-mono">
-              <div className="text-[10px] text-neutral-400 uppercase tracking-widest">TIÊU CHUẨN XANH</div>
-              <div className="text-xs font-bold text-white">24% Sợi Polyeste Tái Chế</div>
-              <div className="text-[10px] text-emerald-400">Bảo tồn tài nguyên & giảm rác thải</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Bottom-Right (Liên kết SQL động & Tồn kho realtime) */}
-        <div className="hidden xl:block absolute bottom-28 right-16 2xl:right-32 z-20 animate-float">
-          <div className="neo-card p-3 rounded-xl border border-white/15 flex items-center gap-3 shadow-xl">
-            <div className="w-10 h-10 rounded-lg bg-[#e60012]/10 border border-[#e60012]/30 flex items-center justify-center text-[#e60012] shrink-0">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div className="text-left font-mono">
-              <div className="text-[10px] text-neutral-400 uppercase tracking-widest">CSDL POSTGRESQL</div>
-              <div className="text-xs font-bold text-white">Đồng Bộ Trigger Tồn Kho</div>
-              <div className="text-[10px] text-amber-400">Ledger giao dịch minh bạch</div>
-            </div>
-          </div>
-        </div>
-
-        {/* ===================================================================
-            CỤM TIÊU ĐỀ TRUNG TÂM (MASSIVE CENTRAL HEADLINE - ARTCRAFT STYLE)
-        ==================================================================== */}
-        <div className="relative z-20 max-w-4xl mx-auto text-center space-y-6">
-          
-          {/* Tag badge kiểu ArtCraft với đường viền mờ */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/15 bg-white/5 backdrop-blur-md shadow-inner text-xs font-mono tracking-widest text-neutral-300">
-            <span className="w-2 h-2 rounded-full bg-[#e60012] animate-ping" />
-            <span className="text-white font-bold">CLOTHES STUDIO</span>
-            <span className="text-neutral-500">//</span>
-            <span className="text-amber-400">BST THU/ĐÔNG 2026</span>
-          </div>
-
-          {/* Tiêu đề chính khổng lồ */}
-          <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight leading-none text-white drop-shadow-2xl">
-            CLOTHES
-          </h1>
-
-          <p className="text-base sm:text-xl text-neutral-300 font-light max-w-2xl mx-auto leading-relaxed">
-            Thiết kế tối giản, tinh hoa dệt may bền vững. Hai biểu tượng phong cách cho Mùa Thu/Đông 2026 với phom dáng chuẩn xác và chất liệu chọn lọc.
-          </p>
-
-          {/* Cặp nút hành động phong cách Liquid Glass */}
-          <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
-            <button
-              onClick={() => scrollTo('products')}
-              className="liquid-glass-btn-accent px-8 py-4 text-xs font-black uppercase tracking-widest flex items-center gap-2 text-white shadow-xl group cursor-pointer"
+        {/* 12-14 Thẻ hình ảnh người mẫu trôi nổi ở nền sau (Framer Motion 3D Floating) */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {HERO_FLOATING_CARDS.map((card) => (
+            <motion.div
+              key={card.id}
+              style={{
+                position: 'absolute',
+                ...card.pos,
+                zIndex: card.depth,
+              }}
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{
+                opacity: 0.82,
+                scale: 1,
+                y: [0, -12, 0],
+                rotate: [card.rotate, card.rotate + 1.5, card.rotate],
+              }}
+              transition={{
+                y: {
+                  duration: card.floatDuration || 6,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                  delay: card.floatDelay || 0,
+                },
+                rotate: {
+                  duration: (card.floatDuration || 6) * 1.2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                  delay: card.floatDelay || 0,
+                },
+                opacity: { duration: 1 },
+              }}
+              className={`${card.width} ${card.aspect} border border-zinc-800/80 bg-zinc-950/60 rounded-md overflow-hidden shadow-2xl backdrop-blur-xs`}
             >
-              <span>Khám Phá Sản Phẩm [Nữ & Nam]</span>
-              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              <img
+                src={card.image}
+                alt={card.title}
+                className="w-full h-full object-cover filter contrast-[1.08] brightness-[0.92]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent flex flex-col justify-end p-2.5">
+                <span className="font-mono text-[9px] text-zinc-400 tracking-wider">
+                  {card.tag}
+                </span>
+                <span className="font-mono text-[10px] font-bold text-white tracking-widest truncate">
+                  {card.title}
+                </span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Lớp phủ Radial-Gradient đen ở tâm để tên thương hiệu luôn nổi bật 100% */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(circle at 50% 50%, rgba(8,8,8,0.95) 0%, rgba(8,8,8,0.75) 45%, rgba(8,8,8,0.2) 80%, transparent 100%)',
+          }}
+        />
+
+        {/* Khối chữ trung tâm */}
+        <div className="relative z-20 max-w-4xl mx-auto text-center space-y-7 px-4">
+          
+          {/* Top Micro Monospace Pill */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="inline-flex items-center gap-2.5 px-3 py-1 border border-zinc-800 bg-zinc-950/80 font-mono text-[10px] sm:text-[11px] tracking-widest text-[#a1a1aa] uppercase"
+          >
+            <span className="w-1.5 h-1.5 bg-[#fafafa] animate-pulse" />
+            <span>DROP FW/26 // ARCHIVE RELEASE</span>
+            <span className="text-zinc-700">//</span>
+            <span className="text-white">AETHER LABS</span>
+          </motion.div>
+
+          {/* Tên thương hiệu lớn: Inter Bold tracking-tight */}
+          <motion.h1
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.9, delay: 0.15 }}
+            className="font-inter font-black text-6xl sm:text-8xl lg:text-9xl tracking-tight text-[#fafafa] uppercase leading-none drop-shadow-2xl select-none"
+          >
+            AETHER LABS
+          </motion.h1>
+
+          {/* Dòng Tagline có nhấn nhá Instrument Serif in nghiêng */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="font-inter text-base sm:text-xl lg:text-2xl text-[#a1a1aa] font-light max-w-2xl mx-auto leading-relaxed"
+          >
+            Engineered garments for{' '}
+            <span className="font-serif italic font-normal text-zinc-100 text-2xl sm:text-3xl">
+              modern nomads
+            </span>
+            .
+          </motion.p>
+
+          {/* 2 Nút Bấm CTA Chuẩn Phong Cách GetArtCraft */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.45 }}
+            className="pt-2 flex flex-wrap items-center justify-center gap-4"
+          >
+            {/* Nút 1: SHOP NEW DROPS (Nền trắng chữ đen) */}
+            <button
+              onClick={() => scrollToSection('catalog')}
+              className="px-8 py-4 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-[11px] font-bold tracking-widest uppercase transition-all shadow-xl active:translate-y-0.5 flex items-center gap-2 cursor-pointer"
+            >
+              <span>SHOP NEW DROPS</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
-            <Link
-              to="/products"
-              className="liquid-glass-btn-dark px-7 py-4 text-xs font-bold uppercase tracking-widest text-neutral-200 border border-white/20 flex items-center gap-2 cursor-pointer"
+            {/* Nút 2: EXPLORE ARCHIVE (Nền đen viền mảnh 1px) */}
+            <button
+              onClick={() => scrollToSection('craftsmanship')}
+              className="px-8 py-4 bg-[#080808] text-[#fafafa] border border-zinc-700 hover:border-[#fafafa] font-mono text-[11px] tracking-widest uppercase transition-all flex items-center gap-2 cursor-pointer hover:bg-zinc-900/60"
             >
-              <Eye className="w-4 h-4 text-neutral-400" />
-              <span>Xem Tất Cả Danh Mục</span>
-            </Link>
-          </div>
+              <span>EXPLORE ARCHIVE</span>
+            </button>
+          </motion.div>
 
-          {/* Chỉ dẫn mã sản phẩm & CSDL */}
-          <div className="pt-2 flex items-center justify-center gap-6 text-[11px] font-mono text-neutral-400">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Nữ Rayon (#479073)
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span> Nam Lông Cừu (#486116)
-            </span>
-            <span className="hidden sm:flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Đổi trả 30 ngày
-            </span>
-          </div>
+          {/* Dòng chữ monospace nhỏ bên dưới nút bấm */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.6 }}
+            className="pt-3 font-mono text-[10px] sm:text-[11px] tracking-widest text-zinc-500 uppercase"
+          >
+            FREE GLOBAL SHIPPING // GORE-TEX PRO // LIMITED ARCHIVE RELEASE
+          </motion.div>
 
         </div>
 
-        {/* ===================================================================
-            ANIMATION VUỐT XUỐNG (SMOOTH SCROLL PROMPT)
-        ==================================================================== */}
+        {/* Scroll Down Cue */}
         <button
-          onClick={() => scrollTo('products')}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 text-neutral-400 hover:text-white transition-all cursor-pointer group"
-          title="Cuộn xuống xem sản phẩm"
+          onClick={() => scrollToSection('catalog')}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 text-zinc-500 hover:text-white transition-colors cursor-pointer group"
         >
-          <span className="text-[10px] font-mono uppercase tracking-widest group-hover:text-amber-400 transition-colors">
-            Cuộn xuống khám phá
+          <span className="font-mono text-[10px] tracking-widest uppercase group-hover:text-zinc-300">
+            CUỘN ĐỂ XEM CATALOG
           </span>
-          <div className="w-7 h-10 rounded-full border-2 border-white/25 flex items-start justify-center p-1 group-hover:border-white transition-colors">
-            <div className="w-1.5 h-2.5 rounded-full bg-[#e60012] animate-bounce" />
-          </div>
+          <ArrowDown className="w-3.5 h-3.5 animate-bounce text-zinc-400" />
         </button>
 
       </section>
 
       {/* =========================================================================
-          INFINITE MARQUEE TICKER BAR (ARTCRAFT SIGNATURE STRIP)
+          3. INFINITE MARQUEE TICKER (DÒNG CHỮ CHẠY NGANG LIÊN TỤC)
       ========================================================================== */}
-      <div className="relative w-full overflow-hidden bg-[#111118] border-y border-white/10 py-3.5 z-20">
-        <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-xs font-mono font-bold tracking-widest text-neutral-300 uppercase">
+      <div className="relative w-full overflow-hidden bg-[#080808] border-b border-zinc-800 py-3.5 z-20">
+        <div className="animate-marquee whitespace-nowrap flex items-center gap-8 font-mono text-[11px] font-bold tracking-widest text-[#a1a1aa] uppercase select-none">
           {[1, 2, 3].map((loop) => (
             <React.Fragment key={loop}>
-              <span className="flex items-center gap-2 text-white">
-                <span className="text-[#e60012]">✦</span> BST THU/ĐÔNG 2026
-              </span>
-              <span className="flex items-center gap-2 text-neutral-400">
-                <span>◆</span> NỮ ÁO KIỂU VẢI RAYON CỔ MỞ [MÃ 479073]
-              </span>
-              <span className="flex items-center gap-2 text-amber-400">
-                <span>✦</span> 24% SỢI POLYESTE TÁI CHẾ BẢO VỆ MÔI TRƯỜNG
-              </span>
-              <span className="flex items-center gap-2 text-neutral-400">
-                <span>◆</span> NAM ÁO KHOÁC GIẢ LÔNG CỪU CẢN GIÓ [MÃ 486116]
-              </span>
-              <span className="flex items-center gap-2 text-emerald-400">
-                <span>✦</span> MIỄN PHÍ VẬN CHUYỂN TỪ 500.000₫ TOÀN QUỐC
-              </span>
-              <span className="flex items-center gap-2 text-neutral-400">
-                <span>◆</span> ĐỔI TRẢ TRỰC TIẾP TẠI CỬA HÀNG TRONG 30 NGÀY
-              </span>
-              <span className="flex items-center gap-2 text-sky-400">
-                <span>✦</span> TÍCH ĐIỂM LOYALTY TỰ ĐỘNG THEO CSDL POSTGRESQL
-              </span>
+              {MARQUEE_ITEMS.map((item, idx) => (
+                <span key={`${loop}-${idx}`} className="flex items-center gap-8">
+                  <span className="text-white hover:text-amber-400 transition-colors">{item}</span>
+                  <span className="text-zinc-700">—</span>
+                </span>
+              ))}
             </React.Fragment>
           ))}
         </div>
       </div>
 
       {/* =========================================================================
-          KHU VỰC SẢN PHẨM RÚT GỌN (2 SẢN PHẨM NAM NỮ PRO_DETAIL & VIDEO NỀN TỰ CHẠY)
+          4. SECTION 01 / CATALOG GRID (LƯỚI SẢN PHẨM & BỘ LỌC 1PX THEO SCHEMA DB)
       ========================================================================== */}
-      <section id="products" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-16">
+      <section id="catalog" className="w-full border-b border-zinc-800">
         
-        {/* Header Bộ Sưu Tập và Bộ Lọc Danh Mục (Chỉ Nữ và Nam) */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-[#e60012] uppercase mb-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>SẢN PHẨM TRỌNG TÂM BST 2026</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Thời Trang Ứng Dụng Nổi Bật
+        {/* Section Header */}
+        <div className="px-4 sm:px-8 lg:px-12 py-14 border-b border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+          <div className="lg:col-span-8 space-y-3">
+            <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase block">
+              01 // FEATURED GARMENTS (CATALOG GRID)
+            </span>
+            <h2 className="font-inter font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#fafafa] leading-[1.08]">
+              The armor that mere <span className="font-serif italic font-normal text-zinc-300">trends</span> cannot outlast.
             </h2>
-            <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-xl">
-              Trích xuất trực tiếp từ danh mục mô tả <span className="font-mono text-neutral-300">pro_detail</span> kết nối kho dữ liệu động.
-            </p>
           </div>
 
-          {/* Nút lọc danh mục: TẤT CẢ, NỮ, NAM (Không còn trẻ em / em bé) */}
-          <div className="flex items-center gap-2 p-1 rounded-lg bg-[#14141e] border border-white/10 self-start md:self-end">
-            <button
-              onClick={() => setSelectedFilter('all')}
-              className={`px-4 py-2 text-xs font-mono font-bold tracking-wider rounded-md transition-all ${
-                selectedFilter === 'all'
-                  ? 'bg-white text-black shadow-lg font-black'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              TẤT CẢ (2)
-            </button>
-            <button
-              onClick={() => setSelectedFilter('nu')}
-              className={`px-4 py-2 text-xs font-mono font-bold tracking-wider rounded-md transition-all ${
-                selectedFilter === 'nu'
-                  ? 'bg-[#e60012] text-white shadow-lg font-black'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              NỮ (1)
-            </button>
-            <button
-              onClick={() => setSelectedFilter('nam')}
-              className={`px-4 py-2 text-xs font-mono font-bold tracking-wider rounded-md transition-all ${
-                selectedFilter === 'nam'
-                  ? 'bg-sky-600 text-white shadow-lg font-black'
-                  : 'text-neutral-400 hover:text-white'
-              }`}
-            >
-              NAM (1)
-            </button>
+          <div className="lg:col-span-4 lg:text-right font-mono text-[11px] text-zinc-400 space-y-1">
+            <div>HỆ THỐNG CƠ SỞ DỮ LIỆU: POSTGRESQL 13+</div>
+            <div className="text-zinc-500">VIEWS: v_inventory_available & v_product_rating</div>
+            <div className="text-emerald-400">● TỒN KHO THỰC TẾ & ĐÁNH GIÁ CHUẨN XÁC</div>
           </div>
         </div>
 
-        {/* ===================================================================
-            SHOWCASE SẢN PHẨM 1: NỮ ÁO KIỂU RAYON (MÃ: 479073)
-        ==================================================================== */}
-        {(selectedFilter === 'all' || selectedFilter === 'nu') && (
-          <div className="neo-card rounded-2xl border border-white/15 overflow-hidden p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 shadow-2xl relative">
+        {/* =====================================================================
+            FILTER BAR (DẠNG Ô VUÔNG 1PX: CATEGORIES, SIZES, COLORS, MATERIALS)
+        ====================================================================== */}
+        <div className="border-b border-zinc-800 bg-zinc-950/60 p-4 sm:px-8 lg:px-12">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             
-            {/* Cột trái: Media Viewer (Video Nền Tự Động Chạy có Bật/Tắt) */}
-            <div className="lg:col-span-6 flex flex-col space-y-4">
-              <div className="relative aspect-[4/5] sm:aspect-square rounded-xl overflow-hidden bg-black border border-white/10 shadow-inner group">
-                
-                {nuVideoActive ? (
-                  <video
-                    id="video-product-nu"
-                    src="/images/products/nu_demo/san_pham1/video_intro.mp4"
-                    autoPlay
-                    loop
-                    muted={nuVideoMuted}
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={productNu?.images?.[0] || '/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif'}
-                    alt={productNu?.name}
-                    className="w-full h-full object-cover object-top"
-                  />
-                )}
-
-                {/* Badge thông tin góc trên */}
-                <div className="absolute top-4 left-4 flex flex-col gap-1 z-20">
-                  <span className="px-2.5 py-1 text-[10px] font-mono font-bold bg-[#e60012] text-white uppercase tracking-wider rounded">
-                    NỮ // MÃ {productNu?.code || '479073'}
-                  </span>
-                  <span className="px-2 py-0.5 text-[9px] font-mono bg-black/70 text-amber-300 backdrop-blur-md rounded border border-white/10">
-                    24% TÁI CHẾ
-                  </span>
-                </div>
-
-                {/* Điều khiển Video Nền Sản Phẩm */}
-                <div className="absolute top-4 right-4 flex items-center gap-1.5 z-20">
-                  {nuVideoActive && (
-                    <>
-                      <button
-                        onClick={() => {
-                          const v = document.getElementById('video-product-nu');
-                          if (v) {
-                            if (nuVideoPlaying) v.pause();
-                            else v.play();
-                            setNuVideoPlaying(!nuVideoPlaying);
-                          }
-                        }}
-                        className="w-8 h-8 rounded-lg bg-black/75 hover:bg-black text-white flex items-center justify-center border border-white/20"
-                        title={nuVideoPlaying ? 'Tạm dừng video' : 'Phát tiếp video'}
-                      >
-                        {nuVideoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 text-amber-400 fill-current" />}
-                      </button>
-
-                      <button
-                        onClick={() => setNuVideoMuted(!nuVideoMuted)}
-                        className="w-8 h-8 rounded-lg bg-black/75 hover:bg-black text-white flex items-center justify-center border border-white/20"
-                        title={nuVideoMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
-                      >
-                        {nuVideoMuted ? <VolumeX className="w-3.5 h-3.5 text-neutral-400" /> : <Volume2 className="w-3.5 h-3.5 text-amber-400" />}
-                      </button>
-                    </>
-                  )}
-
-                  <button
-                    onClick={() => setNuVideoActive(!nuVideoActive)}
-                    className="px-2.5 py-1.5 rounded-lg bg-black/75 hover:bg-black text-white text-[11px] font-mono font-bold border border-white/20 flex items-center gap-1.5"
-                    title="Chuyển đổi giữa Video và Ảnh tĩnh"
-                  >
-                    {nuVideoActive ? <Video className="w-3.5 h-3.5 text-rose-400" /> : <VideoOff className="w-3.5 h-3.5 text-neutral-400" />}
-                    <span>{nuVideoActive ? 'Tắt Video' : 'Bật Video'}</span>
-                  </button>
-                </div>
-
-                {/* Wishlist toggle */}
+            {/* Hàng lọc: Categories + Sizes + Colors + Materials */}
+            <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono">
+              
+              {/* Lọc Categories */}
+              <div className="flex items-center border border-zinc-800 bg-[#080808] p-1">
+                <span className="px-2 text-zinc-500 uppercase hidden sm:inline">DANH MỤC:</span>
                 <button
-                  onClick={() => toggleWishlist(productNu.id)}
-                  className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center border border-white/20 transition-all z-20"
-                  title="Thêm vào danh sách yêu thích"
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-2.5 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
+                    !selectedCategory ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                  }`}
                 >
-                  <Heart className={`w-4 h-4 ${isInWishlist(productNu.id) ? 'fill-[#e60012] text-[#e60012]' : ''}`} />
+                  TẤT CẢ
                 </button>
-              </div>
-
-              {/* Thumbnails ảnh từ pro_detail */}
-              <div className="grid grid-cols-4 gap-2">
-                {productNu?.images?.slice(0, 4).map((img, idx) => (
+                {MOCK_CATEGORIES.map((cat) => (
                   <button
-                    key={idx}
-                    onClick={() => setNuVideoActive(false)}
-                    className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 hover:border-white/50 transition-all"
+                    key={cat.slug}
+                    onClick={() => setSelectedCategory(cat.slug)}
+                    className={`px-2.5 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
+                      selectedCategory === cat.slug ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                    }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    {cat.name}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Cột phải: Thông số chi tiết & Form Mua Hàng */}
-            <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-amber-400">
-                    BỘ SƯU TẬP THU/ĐÔNG 2026
-                  </span>
-                  <div className="flex items-center gap-1 text-xs text-amber-400">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span className="font-bold">4.9</span>
-                    <span className="text-neutral-500 font-mono">(56 đánh giá)</span>
-                  </div>
-                </div>
-
-                <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                  {productNu?.name}
-                </h3>
-
-                <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-black font-mono text-white">
-                    {productNu?.price?.toLocaleString('vi-VN')}₫
-                  </span>
-                  <span className="text-xs text-neutral-400 font-mono">Đã gồm thuế VAT</span>
-                </div>
-
-                {/* Mô tả từ file pro_detail/sanphamnu.txt */}
-                <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed border-t border-white/10 pt-4">
-                  {productNu?.short_desc}
-                </p>
-
-                {/* Thông số kỹ thuật nhanh */}
-                <div className="grid grid-cols-2 gap-3 text-xs font-mono bg-white/5 p-3 rounded-lg border border-white/10">
-                  <div>
-                    <span className="text-neutral-400 block text-[10px]">CHẤT LIỆU:</span>
-                    <span className="text-white font-medium">{productNu?.material?.split('(')[0]}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block text-[10px]">TÁI CHẾ:</span>
-                    <span className="text-amber-400 font-bold">24% Polyeste tái chế</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block text-[10px]">ĐỘ XUYÊN THẤU:</span>
-                    <span className="text-white font-medium">Không xuyên thấu</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block text-[10px]">DÁNG ÁO:</span>
-                    <span className="text-white font-medium">Thoải mái, tôn dáng</span>
-                  </div>
-                </div>
-
-                {/* Chọn Màu Sắc */}
-                <div className="space-y-2 pt-2">
-                  <div className="text-xs font-mono text-neutral-300 flex items-center justify-between">
-                    <span>MÀU SẮC: <strong className="text-white">{nuColor}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {['00 WHITE', '10 BEIGE'].map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setNuColor(c)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all flex items-center gap-2 ${
-                          nuColor === c
-                            ? 'bg-white text-black border-white shadow-lg'
-                            : 'bg-white/5 text-neutral-300 border-white/20 hover:border-white/50'
-                        }`}
-                      >
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-black/30"
-                          style={{ backgroundColor: c.includes('WHITE') ? '#ffffff' : '#E8D8C8' }}
-                        />
-                        <span>{c}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Chọn Size với tồn kho CSDL động */}
-                <div className="space-y-2">
-                  <div className="text-xs font-mono text-neutral-300 flex items-center justify-between">
-                    <span>KÍCH THƯỚC:</span>
-                    <span className="text-neutral-400 text-[11px]">Tồn kho: <strong className="text-emerald-400">{currentVariantNu?.stock || 0} chiếc</strong></span>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['S', 'M', 'L', 'XL'].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setNuSize(s)}
-                        className={`py-2 rounded-lg text-xs font-mono font-black border transition-all ${
-                          nuSize === s
-                            ? 'bg-amber-400 text-black border-amber-400 shadow-md scale-[1.02]'
-                            : 'bg-white/5 text-neutral-300 border-white/15 hover:border-white/40'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* SKU Code & Trigger */}
-                <div className="text-[11px] font-mono text-neutral-400 flex items-center justify-between px-1">
-                  <span>SKU: <strong className="text-neutral-200">{currentVariantNu?.sku}</strong></span>
-                  <span className="text-emerald-400">● CSDL Trigger Ledger</span>
-                </div>
-
-              </div>
-
-              {/* Bộ đếm số lượng & Nút thêm giỏ hàng Liquid Glass */}
-              <div className="space-y-3 pt-4 border-t border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center bg-white/10 border border-white/20 rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => setNuQty(Math.max(1, nuQty - 1))}
-                      className="px-3 py-2 text-white hover:bg-white/20 text-sm font-bold"
-                    >
-                      -
-                    </button>
-                    <span className="px-4 py-2 font-mono font-bold text-white text-sm min-w-8 text-center">
-                      {nuQty}
-                    </span>
-                    <button
-                      onClick={() => setNuQty(Math.min(currentVariantNu?.stock || 99, nuQty + 1))}
-                      className="px-3 py-2 text-white hover:bg-white/20 text-sm font-bold"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={handleAddToCartNu}
-                    disabled={!currentVariantNu || currentVariantNu.stock <= 0}
-                    className="flex-1 liquid-glass-btn-accent py-3 px-5 text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 cursor-pointer"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                    <span>Thêm Vào Giỏ [{currentVariantNu?.size}]</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => {
-                      handleAddToCartNu();
-                      navigate('/cart');
-                    }}
-                    className="flex-1 liquid-glass-btn-dark py-2.5 px-4 text-xs font-mono font-bold uppercase tracking-wider text-neutral-200 border border-white/20 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Mua Ngay</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-
-                  <Link
-                    to={`/products/${productNu.id}`}
-                    className="px-4 py-2.5 text-xs font-mono text-neutral-400 hover:text-white underline underline-offset-4"
-                  >
-                    Chi tiết kỹ thuật →
-                  </Link>
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-        {/* ===================================================================
-            SHOWCASE SẢN PHẨM 2: NAM ÁO KHOÁC LÔNG CỪU CẢN GIÓ (MÃ: 486116)
-        ==================================================================== */}
-        {(selectedFilter === 'all' || selectedFilter === 'nam') && (
-          <div className="neo-card rounded-2xl border border-white/15 overflow-hidden p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 shadow-2xl relative">
-            
-            {/* Cột trái: Media Viewer Nam (Video Nền Tự Động Chạy có Bật/Tắt) */}
-            <div className="lg:col-span-6 flex flex-col space-y-4">
-              <div className="relative aspect-[4/5] sm:aspect-square rounded-xl overflow-hidden bg-black border border-white/10 shadow-inner group">
-                
-                {namVideoActive ? (
-                  <video
-                    id="video-product-nam"
-                    src="/images/products/nam_demo/san_pham1/video_intro_nam.mp4"
-                    autoPlay
-                    loop
-                    muted={namVideoMuted}
-                    playsInline
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <img
-                    src={productNam?.images?.[0] || '/images/products/nam_demo/san_pham1/vngoods_69_486116_3x4.avif'}
-                    alt={productNam?.name}
-                    className="w-full h-full object-cover object-top"
-                  />
-                )}
-
-                {/* Badge thông tin góc trên */}
-                <div className="absolute top-4 left-4 flex flex-col gap-1 z-20">
-                  <span className="px-2.5 py-1 text-[10px] font-mono font-bold bg-neutral-900 text-white uppercase tracking-wider rounded border border-white/30">
-                    NAM // MÃ {productNam?.code || '486116'}
-                  </span>
-                  <span className="px-2 py-0.5 text-[9px] font-mono bg-sky-950/80 text-sky-300 backdrop-blur-md rounded border border-sky-400/30">
-                    CẢN GIÓ GIỮ NHIỆT
-                  </span>
-                </div>
-
-                {/* Điều khiển Video Nền Sản Phẩm Nam */}
-                <div className="absolute top-4 right-4 flex items-center gap-1.5 z-20">
-                  {namVideoActive && (
-                    <>
-                      <button
-                        onClick={() => {
-                          const v = document.getElementById('video-product-nam');
-                          if (v) {
-                            if (namVideoPlaying) v.pause();
-                            else v.play();
-                            setNamVideoPlaying(!namVideoPlaying);
-                          }
-                        }}
-                        className="w-8 h-8 rounded-lg bg-black/75 hover:bg-black text-white flex items-center justify-center border border-white/20"
-                        title={namVideoPlaying ? 'Tạm dừng video' : 'Phát tiếp video'}
-                      >
-                        {namVideoPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 text-amber-400 fill-current" />}
-                      </button>
-
-                      <button
-                        onClick={() => setNamVideoMuted(!namVideoMuted)}
-                        className="w-8 h-8 rounded-lg bg-black/75 hover:bg-black text-white flex items-center justify-center border border-white/20"
-                        title={namVideoMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
-                      >
-                        {namVideoMuted ? <VolumeX className="w-3.5 h-3.5 text-neutral-400" /> : <Volume2 className="w-3.5 h-3.5 text-amber-400" />}
-                      </button>
-                    </>
-                  )}
-
-                  <button
-                    onClick={() => setNamVideoActive(!namVideoActive)}
-                    className="px-2.5 py-1.5 rounded-lg bg-black/75 hover:bg-black text-white text-[11px] font-mono font-bold border border-white/20 flex items-center gap-1.5"
-                    title="Chuyển đổi giữa Video và Ảnh tĩnh"
-                  >
-                    {namVideoActive ? <Video className="w-3.5 h-3.5 text-sky-400" /> : <VideoOff className="w-3.5 h-3.5 text-neutral-400" />}
-                    <span>{namVideoActive ? 'Tắt Video' : 'Bật Video'}</span>
-                  </button>
-                </div>
-
-                {/* Wishlist toggle */}
+              {/* Lọc Sizes */}
+              <div className="flex items-center border border-zinc-800 bg-[#080808] p-1">
+                <span className="px-2 text-zinc-500 uppercase hidden sm:inline">SIZE:</span>
                 <button
-                  onClick={() => toggleWishlist(productNam.id)}
-                  className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center border border-white/20 transition-all z-20"
-                  title="Thêm vào danh sách yêu thích"
+                  onClick={() => setSelectedSize(null)}
+                  className={`px-2 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
+                    !selectedSize ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                  }`}
                 >
-                  <Heart className={`w-4 h-4 ${isInWishlist(productNam.id) ? 'fill-[#e60012] text-[#e60012]' : ''}`} />
+                  ALL
                 </button>
-              </div>
-
-              {/* Thumbnails ảnh Nam */}
-              <div className="grid grid-cols-4 gap-2">
-                {productNam?.images?.slice(0, 4).map((img, idx) => (
+                {MOCK_SIZES.map((sz) => (
                   <button
-                    key={idx}
-                    onClick={() => setNamVideoActive(false)}
-                    className="relative aspect-[3/4] rounded-lg overflow-hidden border border-white/10 hover:border-white/50 transition-all"
+                    key={sz.id}
+                    onClick={() => setSelectedSize(sz.name)}
+                    className={`min-w-[28px] text-center px-1.5 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
+                      selectedSize === sz.name ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                    }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    {sz.name}
                   </button>
                 ))}
               </div>
+
+              {/* Lọc Colors (Hiển thị ô màu từ colors.hex_code) */}
+              <div className="flex items-center border border-zinc-800 bg-[#080808] p-1 gap-1.5 px-2">
+                <span className="text-zinc-500 uppercase hidden sm:inline">MÀU:</span>
+                <button
+                  onClick={() => setSelectedColorId(null)}
+                  className={`px-2 py-0.5 tracking-wider uppercase transition-colors cursor-pointer text-[10px] ${
+                    !selectedColorId ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  ALL
+                </button>
+                {MOCK_COLORS.map((col) => (
+                  <button
+                    key={col.id}
+                    onClick={() => setSelectedColorId(col.id)}
+                    style={{ backgroundColor: col.hex_code }}
+                    className={`w-5 h-5 rounded-none border transition-transform cursor-pointer ${
+                      selectedColorId === col.id
+                        ? 'border-amber-400 scale-110 shadow-sm'
+                        : 'border-zinc-700 hover:scale-105'
+                    }`}
+                    title={col.name}
+                  />
+                ))}
+              </div>
+
+              {/* Lọc Materials */}
+              <div className="flex items-center border border-zinc-800 bg-[#080808] p-1">
+                <span className="px-2 text-zinc-500 uppercase hidden sm:inline">VẢI:</span>
+                {['Tất cả', 'Cotton', 'Denim', 'Rayon', 'Lông cừu'].map((mat) => {
+                  const val = mat === 'Tất cả' ? null : mat;
+                  const isActive = selectedMaterialName === val;
+                  return (
+                    <button
+                      key={mat}
+                      onClick={() => setSelectedMaterialName(val)}
+                      className={`px-2.5 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
+                        isActive ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      {mat}
+                    </button>
+                  );
+                })}
+              </div>
+
             </div>
 
-            {/* Cột phải: Thông số chi tiết Nam & Form Mua Hàng */}
-            <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
+            {/* Trạng thái bộ lọc & Nút Đặt Lại */}
+            <div className="flex items-center justify-between sm:justify-end gap-3 font-mono text-[11px]">
+              <span className="text-zinc-500">
+                HIỂN THỊ <strong className="text-white">{filteredProducts.length}</strong> / 4 SẢN PHẨM
+              </span>
+              {hasActiveFilters && (
+                <button
+                  onClick={resetFilters}
+                  className="flex items-center gap-1.5 px-2.5 py-1 border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white hover:border-zinc-400 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>ĐẶT LẠI</span>
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
+
+        {/* =====================================================================
+            PRODUCT 2x2 EXPOSED 1PX BORDER GRID
+        ====================================================================== */}
+        {filteredProducts.length === 0 ? (
+          <div className="py-24 text-center font-mono text-xs text-zinc-500 space-y-3">
+            <p>KHÔNG CÓ SẢN PHẨM NÀO KHỚP VỚI BỘ LỌC ĐÃ CHỌN.</p>
+            <button
+              onClick={resetFilters}
+              className="px-4 py-2 border border-zinc-800 text-white hover:bg-zinc-900 tracking-widest uppercase cursor-pointer"
+            >
+              [ XÓA TẤT CẢ BỘ LỌC ]
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 divide-zinc-800 border-b border-zinc-800">
+            {filteredProducts.map((garment, index) => {
+              // Điểm đánh giá từ v_product_rating
+              const ratingData =
+                MOCK_PRODUCT_RATINGS.find((r) => r.product_id === garment.id) || garment.rating;
               
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-sky-400">
-                    BỘ SƯU TẬP THU/ĐÔNG 2026
-                  </span>
-                  <div className="flex items-center gap-1 text-xs text-amber-400">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span className="font-bold">4.9</span>
-                    <span className="text-neutral-500 font-mono">(73 đánh giá)</span>
-                  </div>
-                </div>
+              // Khuyến mãi còn hiệu lực
+              const activePromo = ACTIVE_PROMOTIONS.find((p) => p.product_ids.includes(garment.id));
 
-                <h3 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                  {productNam?.name}
-                </h3>
+              // Tồn kho khả dụng của biến thể đang được chọn
+              const activeColorId = cardSelectedColor[garment.id];
+              const activeVariant =
+                garment.variants.find((v) => (v.color_id || v.color?.id) === activeColorId) ||
+                garment.variants[0];
+              const quantityAvailable =
+                activeVariant?.inventory?.quantity_available ?? activeVariant?.stock ?? 30;
 
-                <div className="flex items-baseline gap-3">
-                  <span className="text-3xl font-black font-mono text-white">
-                    {productNam?.price?.toLocaleString('vi-VN')}₫
-                  </span>
-                  <span className="text-xs text-neutral-400 font-mono">Đã gồm thuế VAT</span>
-                </div>
+              // Ảnh hiển thị theo màu đang chọn
+              const displayImage = getProductDisplayImage(garment);
 
-                {/* Mô tả từ file pro_detail/sanphamnam.txt */}
-                <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed border-t border-white/10 pt-4">
-                  {productNam?.short_desc}
-                </p>
-
-                {/* Thông số kỹ thuật nhanh từ pro_detail */}
-                <div className="grid grid-cols-2 gap-3 text-xs font-mono bg-white/5 p-3 rounded-lg border border-white/10">
-                  <div>
-                    <span className="text-neutral-400 block text-[10px]">CHẤT LIỆU NGOÀI:</span>
-                    <span className="text-white font-medium">100% Polyeste Giả Lông Cừu</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block text-[10px]">LỚP LÓT CẢN GIÓ:</span>
-                    <span className="text-sky-300 font-bold">100% Polyeste Cản Gió</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block text-[10px]">GẤU ÁO:</span>
-                    <span className="text-white font-medium">Dây rút điều chỉnh phom</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-400 block text-[10px]">XUẤT XỨ:</span>
-                    <span className="text-white font-medium">Vietnam (Chuẩn quốc tế)</span>
-                  </div>
-                </div>
-
-                {/* Chọn Màu Sắc Nam */}
-                <div className="space-y-2 pt-2">
-                  <div className="text-xs font-mono text-neutral-300 flex items-center justify-between">
-                    <span>MÀU SẮC: <strong className="text-white">{namColor}</strong></span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {['69 NAVY', '30 NATURAL'].map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setNamColor(c)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all flex items-center gap-2 ${
-                          namColor === c
-                            ? 'bg-white text-black border-white shadow-lg'
-                            : 'bg-white/5 text-neutral-300 border-white/20 hover:border-white/50'
-                        }`}
-                      >
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-black/30"
-                          style={{ backgroundColor: c.includes('NAVY') ? '#1e293b' : '#f5f5f0' }}
-                        />
-                        <span>{c}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Chọn Size Nam với tồn kho CSDL */}
-                <div className="space-y-2">
-                  <div className="text-xs font-mono text-neutral-300 flex items-center justify-between">
-                    <span>KÍCH THƯỚC:</span>
-                    <span className="text-neutral-400 text-[11px]">Tồn kho: <strong className="text-emerald-400">{currentVariantNam?.stock || 0} chiếc</strong></span>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['S', 'M', 'L', 'XL'].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setNamSize(s)}
-                        className={`py-2 rounded-lg text-xs font-mono font-black border transition-all ${
-                          namSize === s
-                            ? 'bg-sky-500 text-white border-sky-400 shadow-md scale-[1.02]'
-                            : 'bg-white/5 text-neutral-300 border-white/15 hover:border-white/40'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* SKU Code Nam */}
-                <div className="text-[11px] font-mono text-neutral-400 flex items-center justify-between px-1">
-                  <span>SKU: <strong className="text-neutral-200">{currentVariantNam?.sku}</strong></span>
-                  <span className="text-sky-400">● CSDL Trigger Ledger</span>
-                </div>
-
-              </div>
-
-              {/* Bộ đếm số lượng Nam & Nút thêm giỏ hàng */}
-              <div className="space-y-3 pt-4 border-t border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center bg-white/10 border border-white/20 rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => setNamQty(Math.max(1, namQty - 1))}
-                      className="px-3 py-2 text-white hover:bg-white/20 text-sm font-bold"
-                    >
-                      -
-                    </button>
-                    <span className="px-4 py-2 font-mono font-bold text-white text-sm min-w-8 text-center">
-                      {namQty}
-                    </span>
-                    <button
-                      onClick={() => setNamQty(Math.min(currentVariantNam?.stock || 99, namQty + 1))}
-                      className="px-3 py-2 text-white hover:bg-white/20 text-sm font-bold"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={handleAddToCartNam}
-                    disabled={!currentVariantNam || currentVariantNam.stock <= 0}
-                    className="flex-1 liquid-glass-btn-accent py-3 px-5 text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 cursor-pointer"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                    <span>Thêm Vào Giỏ [{currentVariantNam?.size}]</span>
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => {
-                      handleAddToCartNam();
-                      navigate('/cart');
-                    }}
-                    className="flex-1 liquid-glass-btn-dark py-2.5 px-4 text-xs font-mono font-bold uppercase tracking-wider text-neutral-200 border border-white/20 hover:text-white flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Mua Ngay</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-
-                  <Link
-                    to={`/products/${productNam.id}`}
-                    className="px-4 py-2.5 text-xs font-mono text-neutral-400 hover:text-white underline underline-offset-4"
-                  >
-                    Chi tiết kỹ thuật →
-                  </Link>
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        )}
-
-      </section>
-
-      {/* =========================================================================
-          STATEMENT & BENTO GRID SECTION: CHẤT LIỆU BỀN VỮNG (ARTCRAFT 3 COLUMNS)
-      ========================================================================== */}
-      <section id="statement" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10">
-        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <span className="text-xs font-mono font-bold tracking-widest text-[#e60012] uppercase">
-            CHẤT LƯỢNG TIÊU CHUẨN QUỐC TẾ
-          </span>
-          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-            Chất Liệu Thực Sự Bền Vững. <br />
-            Thiết Kế Cho Cuộc Sống Thường Nhật.
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
-            Mỗi sợi vải Rayon và Polyeste tái chế đều được kiểm soát nghiêm ngặt theo quy chuẩn chuỗi cung ứng minh bạch.
-          </p>
-        </div>
-
-        {/* 3 Bento Cards phong cách ArtCraft */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          <div className="neo-card p-6 rounded-2xl border border-white/15 space-y-4 hover:border-amber-400/50 transition-all group">
-            <div className="text-3xl font-black font-mono text-amber-400 group-hover:scale-110 transition-transform origin-left">
-              01
-            </div>
-            <h3 className="text-lg font-bold text-white tracking-tight">
-              Sợi Rayon & Polyeste Tái Chế
-            </h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              24% Polyeste tái chế trong áo Nữ Rayon 479073 giúp hạn chế rác thải công nghiệp mà vẫn duy trì độ mềm mại, thoáng khí vượt bậc.
-            </p>
-            <div className="pt-2 text-[11px] font-mono text-emerald-400 flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Kiểm định Oeko-Tex Standard
-            </div>
-          </div>
-
-          <div className="neo-card p-6 rounded-2xl border border-white/15 space-y-4 hover:border-sky-400/50 transition-all group">
-            <div className="text-3xl font-black font-mono text-sky-400 group-hover:scale-110 transition-transform origin-left">
-              02
-            </div>
-            <h3 className="text-lg font-bold text-white tracking-tight">
-              Kỹ Thuật Cản Gió Giả Lông Cừu
-            </h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Áo Nam 486116 kết hợp lớp vải ngoài lông cừu ấm áp cùng màng lót cản gió chuyên dụng, trang bị dây rút gấu áo điều chỉnh phom dáng linh hoạt.
-            </p>
-            <div className="pt-2 text-[11px] font-mono text-sky-300 flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Giữ nhiệt & Cản gió tối đa
-            </div>
-          </div>
-
-          <div className="neo-card p-6 rounded-2xl border border-white/15 space-y-4 hover:border-rose-400/50 transition-all group">
-            <div className="text-3xl font-black font-mono text-[#e60012] group-hover:scale-110 transition-transform origin-left">
-              03
-            </div>
-            <h3 className="text-lg font-bold text-white tracking-tight">
-              Quản Trị CSDL & Đổi Trả 30 Ngày
-            </h3>
-            <p className="text-xs text-neutral-400 leading-relaxed">
-              Đồng bộ tồn kho thời gian thực qua hệ thống CSDL PostgreSQL. Khách hàng được đổi trả trực tuyến hoặc tại bất kỳ cửa hàng toàn quốc trong 30 ngày.
-            </p>
-            <div className="pt-2 text-[11px] font-mono text-amber-400 flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Tích hợp RBAC & Sổ cái tồn kho
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* =========================================================================
-          DYNAMIC REVIEWS SECTION: ĐÁNH GIÁ THỰC TẾ ĐƯỢC DUYỆT TỪ CSDL ĐỘNG
-      ========================================================================== */}
-      <section id="reviews" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10 space-y-12">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/10 pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-amber-400 uppercase mb-1">
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <span>ĐÁNH GIÁ TỪ KHÁCH HÀNG THỰC TẾ</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              Phản Hồi Đã Được CSKH Phê Duyệt
-            </h2>
-            <p className="text-xs text-neutral-400 mt-1">
-              Dữ liệu đồng bộ trực tiếp từ bảng <span className="font-mono text-neutral-300">reviews</span> trong CSDL.
-            </p>
-          </div>
-
-          <div className="text-xs font-mono text-neutral-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-            Hiển thị <strong className="text-white">{approvedReviews.length}</strong> đánh giá công khai
-          </div>
-        </div>
-
-        {approvedReviews.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {approvedReviews.map((rev) => {
-              const prod = products.find((p) => p.id === rev.product_id);
               return (
                 <div
-                  key={rev.id}
-                  className="neo-card p-6 rounded-2xl border border-white/10 flex flex-col justify-between space-y-4 hover:border-white/30 transition-all"
+                  key={garment.id}
+                  className={`group relative flex flex-col justify-between bg-[#080808] transition-colors duration-300 hover:bg-zinc-950/40 ${
+                    index % 2 === 0 ? 'md:border-r border-zinc-800' : ''
+                  } ${index >= 2 ? 'md:border-t border-zinc-800' : ''}`}
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-amber-400">
-                        {[...Array(rev.rating || 5)].map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                        ))}
-                      </div>
-                      <span className="text-[10px] font-mono text-neutral-500">
-                        {new Date(rev.created_at).toLocaleDateString('vi-VN')}
+                  
+                  {/* Header nhỏ trên cùng: Danh mục + Điểm đánh giá từ v_product_rating */}
+                  <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between font-mono text-[11px] tracking-widest text-[#a1a1aa] bg-zinc-950/40">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-white" />
+                      <span className="text-white font-bold uppercase">
+                        {String(garment.id).padStart(2, '0')} // {garment.category?.name || 'SẢN PHẨM'}
                       </span>
                     </div>
 
-                    <p className="text-sm text-neutral-200 italic leading-relaxed">
-                      "{rev.comment}"
-                    </p>
+                    <div className="flex items-center gap-3">
+                      {/* Điểm đánh giá v_product_rating */}
+                      <div className="flex items-center gap-1 text-amber-400">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span className="font-bold text-white">
+                          {ratingData?.avg_rating || 5.0}
+                        </span>
+                        <span className="text-zinc-500 text-[10px]">
+                          ({ratingData?.review_count || 12})
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs font-mono">
-                    <div>
-                      <div className="font-bold text-white">{rev.user_name}</div>
-                      <div className="text-[10px] text-neutral-400 truncate max-w-[150px]">
-                        {prod ? prod.name : 'Sản phẩm chính hãng'}
+                  {/* Phần giữa: Ảnh sản phẩm đặt trên nền lưới chấm bi mờ (dot matrix background) */}
+                  <div
+                    onClick={() => setInspectGarment(garment)}
+                    className="relative w-full aspect-[4/3] sm:aspect-[16/11] bg-zinc-950 bg-dot-matrix p-8 sm:p-12 flex items-center justify-center overflow-hidden cursor-pointer"
+                  >
+                    {/* Badge Giảm Giá Monospace nếu nằm trong promotion_products còn hiệu lực */}
+                    {activePromo && (
+                      <div className="absolute top-4 left-4 z-10 px-2.5 py-1 border border-rose-500/80 bg-rose-950/40 font-mono text-[10px] tracking-widest text-rose-300 uppercase shadow-md flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-rose-400 animate-pulse" />
+                        <span>SALE -{activePromo.discount_percent}% // {activePromo.name}</span>
+                      </div>
+                    )}
+
+                    {/* Badge Tồn Kho Khả Dụng v_inventory_available */}
+                    <div className="absolute top-4 right-4 z-10 px-2 py-0.5 border border-zinc-800 bg-black/80 font-mono text-[9px] tracking-widest text-emerald-400 uppercase">
+                      ● CÒN {quantityAvailable} CHIẾC
+                    </div>
+
+                    {/* Ảnh Sản Phẩm */}
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      <img
+                        src={displayImage}
+                        alt={garment.name}
+                        className="max-h-full max-w-full object-contain filter drop-shadow-[0_20px_35px_rgba(0,0,0,0.85)] transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+
+                    {/* Overlay Nút Quick View & Quick Add khi di chuột */}
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 p-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInspectGarment(garment);
+                        }}
+                        className="px-4 py-2.5 bg-black/80 border border-zinc-600 hover:border-white text-white font-mono text-[11px] tracking-widest uppercase transition-colors flex items-center gap-1.5"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        <span>XEM CHI TIẾT</span>
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleQuickAdd(garment);
+                        }}
+                        className="px-4 py-2.5 bg-white text-black hover:bg-zinc-200 font-mono text-[11px] font-bold tracking-widest uppercase transition-colors flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>+ THÊM NHANH</span>
+                      </button>
+                    </div>
+
+                  </div>
+
+                  {/* Phần dưới: Tên sản phẩm, Giá 'TỪ ...', Chấm màu và Thông số vải */}
+                  <div className="p-5 sm:p-6 border-t border-zinc-800 space-y-4 bg-[#080808]">
+                    
+                    {/* Hàng Tiêu đề & Giá bán */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <span className="font-mono text-[10px] text-zinc-500 tracking-wider block">
+                          SKU: {activeVariant?.sku || `ITEM-0${garment.id}`}
+                        </span>
+                        <h3 className="font-inter font-bold text-base sm:text-lg text-[#fafafa] leading-tight hover:text-zinc-300 transition-colors">
+                          {garment.name}
+                        </h3>
+                      </div>
+
+                      {/* Giá tiền: 'TỪ ' + products.base_price */}
+                      <div className="text-right shrink-0">
+                        <span className="font-mono text-[10px] text-zinc-500 uppercase block">GIÁ GỐC</span>
+                        <span className="font-mono text-sm sm:text-base font-bold text-white tracking-wider">
+                          TỪ {formatVND(garment.base_price)}
+                        </span>
                       </div>
                     </div>
 
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-500/30">
-                      Đã Mua Hàng
-                    </span>
+                    {/* Mô tả thông số vải ngắn gọn */}
+                    <p className="font-mono text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                      {garment.description}
+                    </p>
+
+                    {/* Hàng Chọn Màu Sắc (Đổi ảnh theo product_images.variant_id) & Nút Wishlist */}
+                    <div className="pt-2 border-t border-zinc-900 flex items-center justify-between">
+                      
+                      {/* Chọn màu sắc tương tác */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-zinc-500 uppercase">MÀU:</span>
+                        <div className="flex items-center gap-1.5">
+                          {garment.variants.map((v) => {
+                            const colId = v.color_id || v.color?.id;
+                            const hexCode = v.color?.hex_code || '#000000';
+                            const colName = v.color?.name || v.color;
+                            const isSelected = (cardSelectedColor[garment.id] || garment.variants[0]?.color_id) === colId;
+
+                            return (
+                              <button
+                                key={v.sku}
+                                onClick={() => handleSelectCardColor(garment.id, colId)}
+                                style={{ backgroundColor: hexCode }}
+                                className={`w-4 h-4 rounded-none border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'border-white scale-125 shadow-md ring-1 ring-white/50'
+                                    : 'border-zinc-700 opacity-60 hover:opacity-100 hover:scale-110'
+                                }`}
+                                title={`${colName} (${hexCode}) - Bấm để xem ảnh biến thể`}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Nút lưu vào Wishlist */}
+                      <button
+                        onClick={() => toggleWishlist(garment.id)}
+                        className={`p-1.5 border border-zinc-800 hover:border-zinc-500 transition-colors cursor-pointer ${
+                          wishlist.includes(garment.id) ? 'text-rose-400 border-rose-500/50' : 'text-zinc-500 hover:text-white'
+                        }`}
+                        title="Thêm vào danh sách yêu thích"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${wishlist.includes(garment.id) ? 'fill-rose-400' : ''}`} />
+                      </button>
+
+                    </div>
+
                   </div>
+
                 </div>
               );
             })}
           </div>
-        ) : (
-          <div className="text-center py-12 neo-card rounded-2xl border border-white/10">
-            <p className="text-xs font-mono text-neutral-400">Chưa có đánh giá nào được duyệt trong CSDL.</p>
-          </div>
         )}
+
       </section>
 
       {/* =========================================================================
-          CAM KẾT DỊCH VỤ TOÀN TRANG (BOTTOM GUARANTEE GRID)
+          5. SECTION 02 / CRAFTSMANSHIP (KỸ THUẬT RẬP 3D & CHẤT LIỆU CAO CẤP)
       ========================================================================== */}
-      <section className="bg-[#0e0e16] border-t border-white/10 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8 text-xs font-mono">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#e60012] shrink-0">
-              <Truck className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-white font-bold uppercase tracking-wider mb-1">GIAO HÀNG TOÀN QUỐC 24-48H</h4>
-              <p className="text-neutral-400 leading-relaxed text-[11px]">
-                Miễn phí cho mọi đơn từ 500.000₫. Giao tận nơi kiểm tra hàng trước khi thanh toán tiền mặt.
-              </p>
-            </div>
+      <section id="craftsmanship" className="w-full border-b border-zinc-800">
+        
+        {/* Section Header */}
+        <div className="px-4 sm:px-8 lg:px-12 py-16 border-b border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+          <div className="lg:col-span-8 space-y-3">
+            <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase block">
+              02 // CRAFTSMANSHIP & ENGINEERING
+            </span>
+            <h2 className="font-inter font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#fafafa] leading-[1.08]">
+              Stop buying <span className="font-serif italic font-normal text-zinc-300">disposable</span> fashion.
+            </h2>
           </div>
 
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-amber-400 shrink-0">
-              <RotateCcw className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-white font-bold uppercase tracking-wider mb-1">ĐỔI TRẢ DỄ DÀNG 30 NGÀY</h4>
-              <p className="text-neutral-400 leading-relaxed text-[11px]">
-                Hỗ trợ đổi size, đổi mẫu tại bất kỳ cửa hàng hoặc yêu cầu thu hồi trực tuyến trong 30 ngày.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 shrink-0">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-white font-bold uppercase tracking-wider mb-1">CHUẨN CSDL POSTGRESQL</h4>
-              <p className="text-neutral-400 leading-relaxed text-[11px]">
-                Mô hình CSDL quan hệ chuẩn 37 bảng. Tự động khấu trừ tồn kho và ghi nhận lịch sử minh bạch.
-              </p>
-            </div>
+          <div className="lg:col-span-4 lg:text-right font-mono text-[11px] text-zinc-400 space-y-1">
+            <div>TIÊU CHUẨN KỸ THUẬT HÀNG ĐẦU</div>
+            <div className="text-zinc-500">ĐỘ BỀN VẬT LIỆU // BẢO HÀNH TRỌN ĐỜI</div>
           </div>
         </div>
+
+        {/* 3 Cột Kỹ thuật ngăn cách bởi đường viền 1px (Swiss Grid 3 Columns) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-zinc-800">
+          {CRAFTSMANSHIP_PILLARS.map((pillar) => (
+            <div
+              key={pillar.num}
+              className="p-8 sm:p-10 lg:p-12 space-y-6 bg-[#080808] hover:bg-zinc-950/40 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="w-7 h-7 border border-zinc-700 bg-zinc-900 flex items-center justify-center font-mono text-xs font-bold text-white group-hover:border-white transition-colors">
+                  {pillar.num}
+                </span>
+                <span className="font-mono text-[10px] text-zinc-500 tracking-widest">
+                  SPECS.v26
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-inter font-black text-xl sm:text-2xl text-white tracking-tight">
+                  {pillar.title}
+                </h3>
+                <p className="font-mono text-xs text-zinc-400 leading-relaxed font-light">
+                  {pillar.desc}
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-zinc-900 font-mono text-[10px] text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-emerald-400" />
+                <span>KIỂM ĐỊNH CHUỖI CUNG ỨNG TIÊU CHUẨN QUỐC TẾ</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
       </section>
+
+      {/* =========================================================================
+          6. SECTION 03 / WORN BY COMMUNITY (STREET STYLE FIT CHECKS & REVIEWS)
+      ========================================================================== */}
+      <section id="reviews" className="w-full border-b border-zinc-800">
+        
+        {/* Section Header */}
+        <div className="px-4 sm:px-8 lg:px-12 py-16 border-b border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+          <div className="lg:col-span-8 space-y-3">
+            <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase block">
+              03 // WORN BY COMMUNITY (STREET STYLE FIT CHECKS)
+            </span>
+            <h2 className="font-inter font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#fafafa] leading-[1.08]">
+              Trải nghiệm thực tế từ <span className="font-serif italic font-normal text-zinc-300">cộng đồng</span> Aether.
+            </h2>
+          </div>
+
+          <div className="lg:col-span-4 lg:text-right font-mono text-[11px] text-zinc-400 space-y-1">
+            <div>FIT CHECK KHẮP TOÀN CẦU</div>
+            <div className="text-zinc-500">TOKYO // SEOUL // HÀ NỘI</div>
+          </div>
+        </div>
+
+        {/* Lưới 3 Cột Fit Checks */}
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-zinc-800">
+          {COMMUNITY_FIT_CHECKS.map((item) => (
+            <div
+              key={item.id}
+              className="group relative flex flex-col justify-between bg-[#080808] overflow-hidden"
+            >
+              {/* Header ô ảnh: Vị trí Fit Check */}
+              <div className="p-4 border-b border-zinc-800 flex items-center justify-between font-mono text-[10px] tracking-widest text-[#a1a1aa] bg-zinc-950/60">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-400" />
+                  <span className="text-white font-bold">{item.location}</span>
+                </div>
+                <span>{item.user}</span>
+              </div>
+
+              {/* Ảnh người mẫu mặc đồ ngoài đời thực */}
+              <div className="relative aspect-[3/4] overflow-hidden bg-zinc-950">
+                <img
+                  src={item.image}
+                  alt={item.garment}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 filter brightness-95"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-end p-6">
+                  <span className="font-mono text-[10px] text-zinc-400 tracking-wider">
+                    TRANG PHỤC:
+                  </span>
+                  <span className="font-inter font-bold text-base text-white">
+                    {item.garment}
+                  </span>
+
+                  {/* Nút [ SHOP THIS LOOK ] dạng monospace ở góc trái dưới */}
+                  <div className="pt-4">
+                    <button
+                      onClick={() => scrollToSection('catalog')}
+                      className="px-4 py-2 border border-zinc-700 bg-black/80 hover:border-white hover:bg-white hover:text-black font-mono text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>[ SHOP THIS LOOK ]</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          ))}
+        </div>
+
+      </section>
+
+      {/* =========================================================================
+          7. CTA SECTION & FOOTER (SWISS GRID 4 CỘT)
+      ========================================================================== */}
+      <footer id="footer" className="w-full bg-[#080808]">
+        
+        {/* Khung CTA ở giữa */}
+        <div className="px-4 sm:px-8 lg:px-12 py-20 border-b border-zinc-800 text-center space-y-6">
+          <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase">
+            END OF TRANSMISSION // DROP FW/26
+          </span>
+          <h2 className="font-inter font-black text-4xl sm:text-6xl lg:text-7xl tracking-tight text-white max-w-4xl mx-auto leading-none">
+            Start building your{' '}
+            <span className="font-serif italic font-normal text-zinc-300">uniform</span>.
+          </h2>
+          <p className="font-mono text-xs text-zinc-400 max-w-md mx-auto">
+            Hệ thống quần áo tối giản, kỹ thuật cao, đáp ứng mọi điều kiện thời tiết khắc nghiệt.
+          </p>
+
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+            <button
+              onClick={() => scrollToSection('catalog')}
+              className="px-8 py-4 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-[11px] font-bold tracking-widest uppercase transition-all shadow-xl active:translate-y-0.5 cursor-pointer"
+            >
+              SHOP ALL ITEMS
+            </button>
+            <button
+              onClick={() => setSizeGuideOpen(true)}
+              className="px-8 py-4 bg-transparent text-white border border-zinc-700 hover:border-white font-mono text-[11px] tracking-widest uppercase transition-colors cursor-pointer"
+            >
+              SIZE GUIDE (BẢNG SIZE)
+            </button>
+          </div>
+        </div>
+
+        {/* Footer 4 Cột: CATEGORIES, COLLECTIONS, SUPPORT, SOCIALS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-zinc-800 border-b border-zinc-800">
+          
+          {/* Cột 1: CATEGORIES */}
+          <div className="p-8 sm:p-10 space-y-4 font-mono text-xs">
+            <h4 className="text-white font-bold tracking-widest uppercase border-b border-zinc-800 pb-2">
+              CATEGORIES (DANH MỤC)
+            </h4>
+            <ul className="space-y-2 text-zinc-400">
+              {MOCK_CATEGORIES.map((cat) => (
+                <li key={cat.slug}>
+                  <button
+                    onClick={() => {
+                      setSelectedCategory(cat.slug);
+                      scrollToSection('catalog');
+                    }}
+                    className="hover:text-white transition-colors uppercase text-left"
+                  >
+                    // {cat.name}
+                  </button>
+                </li>
+              ))}
+              <li>
+                <button
+                  onClick={() => {
+                    resetFilters();
+                    scrollToSection('catalog');
+                  }}
+                  className="hover:text-white transition-colors uppercase text-left text-zinc-500"
+                >
+                  // TẤT CẢ DROPS
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Cột 2: COLLECTIONS */}
+          <div className="p-8 sm:p-10 space-y-4 font-mono text-xs">
+            <h4 className="text-white font-bold tracking-widest uppercase border-b border-zinc-800 pb-2">
+              COLLECTIONS (BỘ SƯU TẬP)
+            </h4>
+            <ul className="space-y-2 text-zinc-400">
+              <li><a href="#hero" className="hover:text-white transition-colors">// FW/26 NOMAD TECHWEAR</a></li>
+              <li><a href="#hero" className="hover:text-white transition-colors">// HEAVYWEIGHT COTTON 500GSM</a></li>
+              <li><a href="#hero" className="hover:text-white transition-colors">// MODULAR GORE-TEX SHELLS</a></li>
+              <li><a href="#hero" className="hover:text-white transition-colors">// ARCHIVE REISSUES</a></li>
+            </ul>
+          </div>
+
+          {/* Cột 3: SUPPORT & SYSTEM */}
+          <div className="p-8 sm:p-10 space-y-4 font-mono text-xs">
+            <h4 className="text-white font-bold tracking-widest uppercase border-b border-zinc-800 pb-2">
+              SUPPORT (HỖ TRỢ)
+            </h4>
+            <ul className="space-y-2 text-zinc-400">
+              <li><Link to="/orders" className="hover:text-white transition-colors">// TRA CỨU ĐƠN HÀNG</Link></li>
+              <li><Link to="/login" className="hover:text-white transition-colors">// CỔNG KHÁCH HÀNG (CUSTOMER)</Link></li>
+              <li><Link to="/staff/login" className="hover:text-amber-400 transition-colors">// CỔNG NHÂN VIÊN (STAFF)</Link></li>
+              <li><span className="text-zinc-600">// CSKH HOTLINE: 1900 6868</span></li>
+            </ul>
+          </div>
+
+          {/* Cột 4: SOCIALS & COPYRIGHT */}
+          <div className="p-8 sm:p-10 space-y-4 font-mono text-xs">
+            <h4 className="text-white font-bold tracking-widest uppercase border-b border-zinc-800 pb-2">
+              AETHER LABS // TOKYO - HÀ NỘI
+            </h4>
+            <p className="text-zinc-500 text-[11px] leading-relaxed font-light">
+              Thiết kế trang phục tối giản chịu tải cao cho cuộc sống đô thị hiện đại. Toàn bộ bản quyền và nhãn hiệu thuộc về Aether Labs Studio Corp.
+            </p>
+            <div className="pt-2 text-[10px] text-zinc-600">
+              POSTGRESQL 13+ // REACT 19 // TAILWIND CSS // FRAMER MOTION
+            </div>
+          </div>
+
+        </div>
+
+        {/* Bottom copyright line */}
+        <div className="px-4 sm:px-8 py-6 flex flex-col sm:flex-row items-center justify-between font-mono text-[10px] text-zinc-600 gap-2">
+          <span>© 2026 AETHER LABS CORP. ALL RIGHTS RESERVED.</span>
+          <span className="text-zinc-500">ENGINEERED FOR MODERN NOMADS</span>
+        </div>
+
+      </footer>
+
+      {/* =========================================================================
+          SLIDE-OUT CART DRAWER & MODALS
+      ========================================================================== */}
+      <AetherCartDrawer
+        isOpen={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={cartItemsStore}
+        onUpdateQuantity={updateQuantityStore}
+        onRemoveItem={removeFromCartStore}
+      />
+
+      <AetherSearchModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSelectGarment={(garment) => {
+          setSearchOpen(false);
+          setInspectGarment(garment);
+        }}
+      />
+
+      <AetherQuickViewModal
+        isOpen={Boolean(inspectGarment)}
+        garment={inspectGarment}
+        onClose={() => setInspectGarment(null)}
+        onAddToCart={(item) => {
+          addToCartStore(item);
+          toast.success(`[ĐÃ THÊM] ${item.name} vào giỏ hàng!`, {
+            style: {
+              background: '#080808',
+              color: '#fafafa',
+              border: '1px solid #27272a',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '11px',
+            },
+          });
+        }}
+      />
+
+      {/* Size Guide Modal */}
+      {sizeGuideOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setSizeGuideOpen(false)} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+          <div className="relative w-full max-w-xl bg-[#080808] border border-zinc-800 p-6 text-white z-10 space-y-4">
+            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+              <span className="font-mono text-xs font-bold tracking-widest uppercase">
+                BẢNG THÔNG SỐ SIZE CHUẨN // AETHER FIT
+              </span>
+              <button onClick={() => setSizeGuideOpen(false)} className="text-zinc-500 hover:text-white">✕</button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full font-mono text-xs text-left border border-zinc-800">
+                <thead className="bg-zinc-950 text-zinc-400 border-b border-zinc-800">
+                  <tr>
+                    <th className="p-2 border-r border-zinc-800">SIZE</th>
+                    <th className="p-2 border-r border-zinc-800">CHIỀU CAO (CM)</th>
+                    <th className="p-2 border-r border-zinc-800">CÂN NẶNG (KG)</th>
+                    <th className="p-2">VÒNG NGỰC (CM)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900 text-zinc-300">
+                  <tr><td className="p-2 border-r border-zinc-800 font-bold text-white">S</td><td className="p-2 border-r border-zinc-800">160 - 168</td><td className="p-2 border-r border-zinc-800">50 - 58</td><td className="p-2">84 - 88</td></tr>
+                  <tr><td className="p-2 border-r border-zinc-800 font-bold text-white">M</td><td className="p-2 border-r border-zinc-800">168 - 175</td><td className="p-2 border-r border-zinc-800">58 - 68</td><td className="p-2">88 - 94</td></tr>
+                  <tr><td className="p-2 border-r border-zinc-800 font-bold text-white">L</td><td className="p-2 border-r border-zinc-800">175 - 182</td><td className="p-2 border-r border-zinc-800">68 - 78</td><td className="p-2">94 - 100</td></tr>
+                  <tr><td className="p-2 border-r border-zinc-800 font-bold text-white">XL</td><td className="p-2 border-r border-zinc-800">180 - 190</td><td className="p-2 border-r border-zinc-800">78 - 90</td><td className="p-2">100 - 108</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="font-mono text-[10px] text-zinc-500">
+              * Rập dáng thoải mái (Relaxed fit). Nếu muốn mặc vừa vặn cơ thể, vui lòng chọn lùi 1 size.
+            </p>
+          </div>
+        </div>
+      )}
 
     </div>
   );

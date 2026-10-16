@@ -1,13 +1,17 @@
 import React from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore, normalizeRoleCode } from '../store/authStore';
 import { ShieldAlert, ArrowLeft, KeyRound } from 'lucide-react';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const { user } = useAuthStore();
   const location = useLocation();
 
-  const isStaffRoute = allowedRoles && allowedRoles.some((r) => ['warehouse', 'cskh', 'admin'].includes(r));
+  const isStaffRoute =
+    allowedRoles &&
+    allowedRoles.some((r) =>
+      ['warehouse', 'cskh', 'admin', 'WAREHOUSE_MANAGER', 'CS_STAFF', 'SUPER_ADMIN'].includes(r)
+    );
 
   if (!user) {
     // Nếu là route của nhân sự -> chuyển hướng về trang /staff/login
@@ -16,14 +20,26 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to={`${targetLogin}?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
-  // Nếu route có yêu cầu vai trò cụ thể mà user không có quyền
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    const requiredRoleNames = allowedRoles.map((r) => {
-      if (r === 'admin') return 'Quản Trị Viên (Admin)';
-      if (r === 'warehouse') return 'Quản Lý Kho (Warehouse)';
-      if (r === 'cskh') return 'Chăm Sóc Khách Hàng (CSKH)';
-      return r;
-    }).join(' hoặc ');
+  // Chuẩn hóa role của user và danh sách allowedRoles
+  const userNormalized = normalizeRoleCode(user.role);
+  const allowedNormalized = allowedRoles ? allowedRoles.map(normalizeRoleCode) : [];
+
+  // SUPER_ADMIN luôn có quyền truy cập vào các dashboard nội bộ
+  const hasAccess =
+    allowedNormalized.length === 0 ||
+    allowedNormalized.includes(userNormalized) ||
+    (isStaffRoute && userNormalized === 'SUPER_ADMIN');
+
+  if (!hasAccess) {
+    const requiredRoleNames = allowedRoles
+      .map((r) => {
+        const norm = normalizeRoleCode(r);
+        if (norm === 'SUPER_ADMIN') return 'Quản Trị Viên (SUPER_ADMIN)';
+        if (norm === 'WAREHOUSE_MANAGER') return 'Quản Lý Kho (WAREHOUSE_MANAGER)';
+        if (norm === 'CS_STAFF') return 'Chăm Sóc Khách Hàng (CS_STAFF)';
+        return r;
+      })
+      .join(' hoặc ');
 
     return (
       <div className="max-w-md mx-auto my-16 p-8 bg-white border border-neutral-300 shadow-xl text-center space-y-4">
