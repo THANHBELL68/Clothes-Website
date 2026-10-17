@@ -69,8 +69,57 @@ export default function AdminDashboard() {
     updateSettings,
     logAudit,
   } = useDbStore();
-  const { orders } = useOrderStore();
+  const rawOrders = useOrderStore((state) => state.orders);
+  const resetOrdersToDemo = useOrderStore((state) => state.resetOrdersToDemo);
+  const createDemoNewOrder = useOrderStore((state) => state.createDemoNewOrder);
+  const orders = useMemo(() => (Array.isArray(rawOrders) ? rawOrders : []), [rawOrders]);
   const { conversations, messages, sendMessage, markAsRead } = useChatStore();
+
+  // Lắng nghe sự kiện storage và shop_orders_updated để tự động đồng bộ đơn hàng tức thì giữa các tab
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        if (useOrderStore.persist?.rehydrate) {
+          useOrderStore.persist.rehydrate();
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('shop_orders_updated', handleSync);
+    window.addEventListener('focus', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('shop_orders_updated', handleSync);
+      window.removeEventListener('focus', handleSync);
+    };
+  }, []);
+
+  // Tính số lượng công việc chờ xử lý cho từng tab
+  const pendingOrdersCount = useMemo(() => {
+    return orders.filter((o) => {
+      const st = String(o.status || '').toLowerCase();
+      return st === 'new' || st === 'processing';
+    }).length;
+  }, [orders]);
+
+  const pendingReturnsCount = useMemo(() => {
+    return orders.filter((o) => o.return_request && String(o.return_request.status || '').toLowerCase() === 'pending').length;
+  }, [orders]);
+
+  const pendingRefundsCount = useMemo(() => {
+    return (refunds || []).filter((r) => String(r.status || '').toLowerCase() === 'pending').length;
+  }, [refunds]);
+
+  const pendingReviewsCount = useMemo(() => {
+    return (reviews || []).filter((r) => String(r.status || '').toLowerCase() === 'pending').length;
+  }, [reviews]);
+
+  const whOrdersCount = useMemo(() => {
+    return orders.filter((o) => {
+      const st = String(o.status || '').toLowerCase();
+      return st === 'processing' || st === 'packing' || st === 'shipping';
+    }).length;
+  }, [orders]);
 
   // Chuẩn hóa vai trò và quyền hạn từ view v_user_permissions
   const currentRole = normalizeRoleCode(user?.role);
@@ -82,16 +131,40 @@ export default function AdminDashboard() {
 
     // 1. Phân quyền CSKH (CS_STAFF)
     if (userPermissions.includes('ORDER_CONFIRM_CANCEL')) {
-      tabs.push({ id: 'cskh_orders', label: 'Xác Nhận Đơn Hàng', icon: CheckCircle, module: 'CSKH' });
+      tabs.push({
+        id: 'cskh_orders',
+        label: `Xác Nhận Đơn Hàng${pendingOrdersCount > 0 ? ` (${pendingOrdersCount})` : ''}`,
+        icon: CheckCircle,
+        module: 'CSKH',
+        badge: pendingOrdersCount,
+      });
     }
     if (userPermissions.includes('RETURN_REQUEST_REVIEW')) {
-      tabs.push({ id: 'cskh_returns', label: 'Duyệt Đổi Trả', icon: RotateCcw, module: 'CSKH' });
+      tabs.push({
+        id: 'cskh_returns',
+        label: `Duyệt Đổi Trả${pendingReturnsCount > 0 ? ` (${pendingReturnsCount})` : ''}`,
+        icon: RotateCcw,
+        module: 'CSKH',
+        badge: pendingReturnsCount,
+      });
     }
     if (userPermissions.includes('REFUND_TRACK')) {
-      tabs.push({ id: 'cskh_refunds', label: 'Cập Nhật Hoàn Tiền', icon: DollarSign, module: 'CSKH' });
+      tabs.push({
+        id: 'cskh_refunds',
+        label: `Cập Nhật Hoàn Tiền${pendingRefundsCount > 0 ? ` (${pendingRefundsCount})` : ''}`,
+        icon: DollarSign,
+        module: 'CSKH',
+        badge: pendingRefundsCount,
+      });
     }
     if (userPermissions.includes('REVIEW_MODERATE')) {
-      tabs.push({ id: 'cskh_reviews', label: 'Kiểm Duyệt Đánh Giá', icon: Star, module: 'CSKH' });
+      tabs.push({
+        id: 'cskh_reviews',
+        label: `Kiểm Duyệt Đánh Giá${pendingReviewsCount > 0 ? ` (${pendingReviewsCount})` : ''}`,
+        icon: Star,
+        module: 'CSKH',
+        badge: pendingReviewsCount,
+      });
     }
     if (userPermissions.includes('LIVECHAT_REPLY')) {
       tabs.push({ id: 'cskh_livechat', label: 'Trả Lời Live Chat', icon: MessageSquare, module: 'CSKH' });
@@ -108,7 +181,13 @@ export default function AdminDashboard() {
       tabs.push({ id: 'wh_stocktake', label: 'Kiểm Kê Kho', icon: Filter, module: 'KHO' });
     }
     if (userPermissions.includes('ORDER_STATUS_UPDATE')) {
-      tabs.push({ id: 'wh_orders', label: 'Tiến Độ Đơn Hàng', icon: Truck, module: 'KHO' });
+      tabs.push({
+        id: 'wh_orders',
+        label: `Tiến Độ Đơn Hàng${whOrdersCount > 0 ? ` (${whOrdersCount})` : ''}`,
+        icon: Truck,
+        module: 'KHO',
+        badge: whOrdersCount,
+      });
     }
 
     // 3. Phân quyền Quản Trị Viên (SUPER_ADMIN)
@@ -129,7 +208,7 @@ export default function AdminDashboard() {
     }
 
     return tabs;
-  }, [userPermissions]);
+  }, [userPermissions, pendingOrdersCount, pendingReturnsCount, pendingRefundsCount, pendingReviewsCount, whOrdersCount]);
 
   // Tab đang được chọn
   const [activeTab, setActiveTab] = useState(availableTabs[0]?.id || 'cskh_orders');
@@ -193,15 +272,32 @@ export default function AdminDashboard() {
 
   // --- HANDLERS: CSKH ---
 
+  // CSKH: Tạo nhanh 1 đơn hàng test để kiểm thử luồng xác nhận
+  const handleCreateTestOrder = () => {
+    const newOrd = createDemoNewOrder();
+    toast.success(`Đã tạo đơn hàng test [${newOrd.code}] (Trạng thái: MỚI TẠO)!`);
+  };
+
+  // CSKH: Nạp lại danh sách đơn hàng mẫu
+  const handleResetDemoOrders = () => {
+    resetOrdersToDemo();
+    toast.success('Đã đồng bộ lại toàn bộ danh sách đơn hàng mẫu!');
+  };
+
   // CSKH: Xác nhận đơn hàng (new -> processing)
   const handleConfirmOrder = (order) => {
+    const targetId = order.id || order.order_id;
+    const targetCode = order.code || order.order_code;
     useOrderStore.setState((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === order.id ? { ...o, status: 'processing' } : o
+      orders: (state.orders || []).map((o) =>
+        (o.id === targetId || o.order_id === targetId) ? { ...o, status: 'processing', updated_at: new Date().toISOString() } : o
       ),
     }));
-    logAudit(user?.full_name || 'Phạm CSKH', 'CONFIRM_ORDER', order.code, 'CSKH xác nhận đơn hàng mới -> Chuyển sang xử lý');
-    toast.success(`Đã xác nhận đơn hàng ${order.code} thành công!`);
+    try {
+      window.dispatchEvent(new CustomEvent('shop_orders_updated'));
+    } catch {}
+    logAudit(user?.full_name || 'Phạm CSKH', 'CONFIRM_ORDER', targetCode, 'CSKH xác nhận đơn hàng mới -> Chuyển sang xử lý');
+    toast.success(`Đã xác nhận đơn hàng ${targetCode} thành công! Chuyển sang cho bộ phận Kho đóng gói.`);
   };
 
   // CSKH: Hủy đơn hàng có lý do
@@ -219,9 +315,11 @@ export default function AdminDashboard() {
 
   // CSKH: Duyệt đổi trả (status -> approved)
   const handleApproveReturn = (order) => {
+    const targetId = order.id || order.order_id;
+    const targetCode = order.code || order.order_code;
     useOrderStore.setState((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === order.id
+      orders: (state.orders || []).map((o) =>
+        (o.id === targetId || o.order_id === targetId)
           ? {
               ...o,
               return_request: {
@@ -234,17 +332,22 @@ export default function AdminDashboard() {
           : o
       ),
     }));
-    logAudit(user?.full_name || 'Phạm CSKH', 'APPROVE_RETURN', order.code, 'CSKH duyệt yêu cầu đổi trả');
-    toast.success(`Đã duyệt yêu cầu đổi trả cho đơn ${order.code}! Yêu cầu được gửi sang bộ phận Kho.`);
+    try {
+      window.dispatchEvent(new CustomEvent('shop_orders_updated'));
+    } catch {}
+    logAudit(user?.full_name || 'Phạm CSKH', 'APPROVE_RETURN', targetCode, 'CSKH duyệt yêu cầu đổi trả');
+    toast.success(`Đã duyệt yêu cầu đổi trả cho đơn ${targetCode}! Yêu cầu được gửi sang bộ phận Kho.`);
   };
 
   // CSKH: Từ chối đổi trả (bắt buộc reject_reason)
   const handleRejectReturnSubmit = (e) => {
     e.preventDefault();
     if (!rejectModal.order) return;
+    const targetId = rejectModal.order.id || rejectModal.order.order_id;
+    const targetCode = rejectModal.order.code || rejectModal.order.order_code;
     useOrderStore.setState((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === rejectModal.order.id
+      orders: (state.orders || []).map((o) =>
+        (o.id === targetId || o.order_id === targetId)
           ? {
               ...o,
               return_request: {
@@ -258,8 +361,11 @@ export default function AdminDashboard() {
           : o
       ),
     }));
-    logAudit(user?.full_name || 'Phạm CSKH', 'REJECT_RETURN', rejectModal.order.code, `Từ chối đổi trả: ${rejectReason}`);
-    toast.success(`Đã từ chối yêu cầu đổi trả đơn ${rejectModal.order.code}`);
+    try {
+      window.dispatchEvent(new CustomEvent('shop_orders_updated'));
+    } catch {}
+    logAudit(user?.full_name || 'Phạm CSKH', 'REJECT_RETURN', targetCode, `Từ chối đổi trả: ${rejectReason}`);
+    toast.success(`Đã từ chối yêu cầu đổi trả đơn ${targetCode}`);
     setRejectModal({ open: false, order: null });
   };
 
@@ -312,11 +418,17 @@ export default function AdminDashboard() {
     }
 
     // Chuyển đơn sang shipping trong orderStore
+    const targetId = order.id || order.order_id;
     useOrderStore.setState((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === order.id ? { ...o, status: 'shipping', tracking_code: tracking } : o
+      orders: (state.orders || []).map((o) =>
+        (o.id === targetId || o.order_id === targetId)
+          ? { ...o, status: 'shipping', tracking_code: tracking, updated_at: new Date().toISOString() }
+          : o
       ),
     }));
+    try {
+      window.dispatchEvent(new CustomEvent('shop_orders_updated'));
+    } catch {}
 
     toast.success(`Đã tạo phiếu xuất kho ${res.document.code} và chuyển đơn sang ĐANG GIAO HÀNG (shipping)!`);
     setExportModal({ open: false, order: null, carrierId: 1, trackingCode: '' });
@@ -373,10 +485,13 @@ export default function AdminDashboard() {
   // Quản lý kho: Chuyển bước tiến độ đơn hàng
   const handleAdvanceOrderStatus = (orderId, newStatus) => {
     useOrderStore.setState((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === orderId ? { ...o, status: newStatus } : o
+      orders: (state.orders || []).map((o) =>
+        (o.id === orderId || o.order_id === orderId) ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o
       ),
     }));
+    try {
+      window.dispatchEvent(new CustomEvent('shop_orders_updated'));
+    } catch {}
     logAudit(user?.full_name || 'Lê Thủ Kho', 'ORDER_STATUS_UPDATE', `Đơn #${orderId}`, `Chuyển trạng thái sang: ${newStatus.toUpperCase()}`);
     toast.success(`Đã chuyển đơn hàng sang: ${newStatus.toUpperCase()}`);
   };
@@ -569,15 +684,32 @@ export default function AdminDashboard() {
       {/* === MODULE CSKH 1: XÁC NHẬN ĐƠN HÀNG (new -> processing) === */}
       {activeTab === 'cskh_orders' && (
         <div className="bg-[#0d0d0d] border border-zinc-800 p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-3 gap-3">
             <div>
               <h2 className="font-mono text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-emerald-400" />
                 MÀN HÌNH XÁC NHẬN ĐƠN HÀNG MỚI (new &rarr; processing)
               </h2>
-              <p className="font-mono text-xs text-zinc-400">
+              <p className="font-mono text-xs text-zinc-400 mt-0.5">
                 Quyền thực thi: <code className="text-emerald-400">ORDER_CONFIRM_CANCEL</code>. Đơn ở trạng thái <code>new</code> cần CSKH gọi điện hoặc xác thực thông tin trước khi chuyển sang đóng gói.
               </p>
+            </div>
+
+            <div className="flex items-center gap-2 font-mono">
+              <button
+                onClick={handleCreateTestOrder}
+                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-[11px] font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5 transition-all shadow-sm"
+                title="Tạo nhanh 1 đơn hàng test ở trạng thái new để kiểm tra luồng CSKH"
+              >
+                + Tạo Đơn Test (new)
+              </button>
+              <button
+                onClick={handleResetDemoOrders}
+                className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-[11px] font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5 transition-all"
+                title="Nạp lại toàn bộ danh sách đơn hàng mẫu chuẩn CSDL"
+              >
+                ↻ Đồng Bộ Đơn Mẫu
+              </button>
             </div>
           </div>
 
@@ -595,57 +727,121 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {orders
-                  .filter((o) => o.status === 'new' || o.status === 'processing')
-                  .map((order) => (
-                    <tr key={order.id} className="hover:bg-zinc-900/40">
-                      <td className="p-3 font-bold text-white">{order.code}</td>
-                      <td className="p-3">
-                        <strong className="text-white font-sans">{order.receiver_name}</strong>
-                        <p className="text-[11px] text-zinc-500">{order.receiver_phone}</p>
-                      </td>
-                      <td className="p-3 max-w-xs truncate text-zinc-400">{order.shipping_address}</td>
-                      <td className="p-3">
-                        {order.items.map((it) => (
-                          <div key={it.id} className="text-[11px] text-zinc-300">
-                            • {it.product_name} ({it.size}/{it.color}) x{it.quantity}
-                          </div>
-                        ))}
-                      </td>
-                      <td className="p-3 font-bold text-emerald-400">
-                        {order.total.toLocaleString('vi-VN')}₫
-                      </td>
-                      <td className="p-3">
-                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
-                          order.status === 'new'
-                            ? 'bg-amber-950/60 text-amber-300 border-amber-800'
-                            : 'bg-blue-950/60 text-blue-300 border-blue-800'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right space-x-2">
-                        {order.status === 'new' ? (
+                {orders.filter((o) => {
+                  const st = String(o.status || '').toLowerCase();
+                  return st === 'new' || st === 'processing';
+                }).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-10 text-center text-zinc-500 font-mono">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <Package className="w-10 h-10 text-zinc-600" />
+                        <p className="text-sm text-zinc-300 font-bold uppercase tracking-wider">
+                          Hiện tại chưa có đơn hàng nào cần xác nhận (0 đơn chờ)
+                        </p>
+                        <p className="text-xs text-zinc-500 max-w-md">
+                          Khi khách hàng đặt hàng từ trang Checkout (cả thành viên lẫn khách vãng lai), đơn hàng sẽ lập tức xuất hiện tại đây theo thời gian thực.
+                        </p>
+                        <div className="flex gap-2.5 pt-2">
                           <button
-                            onClick={() => handleConfirmOrder(order)}
-                            className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-mono text-[11px] font-bold uppercase tracking-wider cursor-pointer"
+                            onClick={handleCreateTestOrder}
+                            className="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase text-[11px] cursor-pointer"
                           >
-                            XÁC NHẬN ĐƠN
+                            + Tạo 1 đơn hàng test (MỚI TẠO)
                           </button>
-                        ) : (
-                          <span className="text-[11px] text-zinc-500 italic">Đã xác nhận</span>
-                        )}
+                          <button
+                            onClick={handleResetDemoOrders}
+                            className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold uppercase text-[11px] border border-zinc-700 cursor-pointer"
+                          >
+                            ↻ Nạp lại toàn bộ đơn mẫu
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  orders
+                    .filter((o) => {
+                      const st = String(o.status || '').toLowerCase();
+                      return st === 'new' || st === 'processing';
+                    })
+                    .map((order) => {
+                      const orderCode = order.code || order.order_code || 'ORD-UNKNOWN';
+                      const customerName = order.receiver_name || order.customer_name || order.recipient_name || 'Khách vãng lai';
+                      const customerPhone = order.receiver_phone || order.customer_phone || order.recipient_phone || '---';
+                      const shippingAddress = order.shipping_address || order.street_address || 'Địa chỉ giao hàng';
+                      const totalVal = order.total !== undefined ? order.total : (order.total_amount || 0);
+                      const isNew = String(order.status).toLowerCase() === 'new';
 
-                        <button
-                          onClick={() => handleCancelOrder(order.id, order.code)}
-                          className="px-2.5 py-1.5 bg-zinc-900 hover:bg-rose-950 border border-zinc-700 hover:border-rose-800 text-zinc-400 hover:text-rose-400 font-mono text-[11px] cursor-pointer"
-                          title="Hủy đơn theo yêu cầu"
-                        >
-                          Hủy
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                      return (
+                        <tr key={order.id || order.order_id || orderCode} className="hover:bg-zinc-900/40 transition-colors">
+                          <td className="p-3">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-white text-xs">{orderCode}</span>
+                              {isNew && (
+                                <span className="px-1.5 py-0.2 bg-amber-500 text-black text-[9px] font-black uppercase tracking-wider animate-pulse">
+                                  MỚI
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-zinc-500 mt-0.5">
+                              {new Date(order.created_at || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
+                              {new Date(order.created_at || Date.now()).toLocaleDateString('vi-VN')}
+                            </p>
+                          </td>
+                          <td className="p-3">
+                            <strong className="text-white font-sans block">{customerName}</strong>
+                            <p className="text-[11px] text-emerald-400 font-mono mt-0.5">{customerPhone}</p>
+                          </td>
+                          <td className="p-3 max-w-xs truncate text-zinc-300" title={shippingAddress}>
+                            {shippingAddress}
+                          </td>
+                          <td className="p-3">
+                            {(order.items || []).length > 0 ? (
+                              order.items.map((it, idx) => (
+                                <div key={it.id || idx} className="text-[11px] text-zinc-300">
+                                  • {it.product_name || it.name || 'Sản phẩm'} {it.size ? `(${it.size}${it.color ? '/' + it.color : ''})` : ''} x{it.quantity || 1}
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-[11px] text-zinc-500 italic">Chi tiết 1 mặt hàng</span>
+                            )}
+                          </td>
+                          <td className="p-3 font-bold text-emerald-400 text-sm whitespace-nowrap">
+                            {Number(totalVal).toLocaleString('vi-VN')}₫
+                          </td>
+                          <td className="p-3 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
+                              isNew
+                                ? 'bg-amber-950/60 text-amber-300 border-amber-800'
+                                : 'bg-blue-950/60 text-blue-300 border-blue-800'
+                            }`}>
+                              {isNew ? '01 // MỚI TẠO' : '02 // ĐANG XỬ LÝ'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right space-x-2 whitespace-nowrap">
+                            {isNew ? (
+                              <button
+                                onClick={() => handleConfirmOrder(order)}
+                                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-mono text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-sm"
+                              >
+                                XÁC NHẬN ĐƠN
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-zinc-500 italic">Đã xác nhận &rarr; Chờ kho</span>
+                            )}
+
+                            <button
+                              onClick={() => handleCancelOrder(order.id || order.order_id, orderCode)}
+                              className="px-2.5 py-1.5 bg-zinc-900 hover:bg-rose-950 border border-zinc-700 hover:border-rose-800 text-zinc-400 hover:text-rose-400 font-mono text-[11px] cursor-pointer"
+                              title="Hủy đơn theo yêu cầu của khách"
+                            >
+                              Hủy
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                )}
               </tbody>
             </table>
           </div>
@@ -668,15 +864,30 @@ export default function AdminDashboard() {
           </div>
 
           <div className="divide-y divide-zinc-800">
-            {orders
-              .filter((o) => o.return_request)
-              .map((order) => {
-                const req = order.return_request;
-                return (
-                  <div key={order.id} className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-mono text-xs">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white text-sm">{order.code}</span>
+            {orders.filter((o) => o.return_request).length === 0 ? (
+              <div className="p-8 text-center text-zinc-500 font-mono">
+                <RotateCcw className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                <p className="text-sm text-zinc-400 font-bold uppercase tracking-wider">
+                  Hiện tại không có yêu cầu đổi trả nào đang chờ duyệt
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Khách hàng có thể gửi yêu cầu đổi/trả cho các đơn hàng hoàn tất trong vòng 7 ngày từ trang Tra cứu đơn hàng.
+                </p>
+              </div>
+            ) : (
+              orders
+                .filter((o) => o.return_request)
+                .map((order) => {
+                  const req = order.return_request;
+                  const orderCode = order.code || order.order_code || 'ORD-UNKNOWN';
+                  const customerName = order.receiver_name || order.customer_name || order.recipient_name || 'Khách hàng';
+                  const customerPhone = order.receiver_phone || order.customer_phone || order.recipient_phone || '---';
+
+                  return (
+                    <div key={order.id || order.order_id || orderCode} className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-mono text-xs">
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white text-sm">{orderCode}</span>
                         <span className={`px-2 py-0.5 text-[9px] font-bold uppercase border ${
                           req.type === 'exchange'
                             ? 'bg-blue-950/60 text-blue-300 border-blue-800'
@@ -696,7 +907,7 @@ export default function AdminDashboard() {
                       </div>
 
                       <p className="text-zinc-400">
-                        Khách hàng: <strong className="text-white font-sans">{order.receiver_name}</strong> ({order.receiver_phone})
+                        Khách hàng: <strong className="text-white font-sans">{customerName}</strong> ({customerPhone})
                       </p>
                       <p className="text-zinc-400">
                         Lý do: <strong className="text-zinc-200">{req.reason}</strong>
@@ -726,7 +937,8 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 );
-              })}
+              })
+            )}
           </div>
         </div>
       )}
@@ -1362,65 +1574,90 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
-              {orders
-                .filter((o) => o.status !== 'cancelled')
-                .map((order) => (
-                  <tr key={order.id} className="hover:bg-zinc-900/40">
-                    <td className="p-3 font-bold text-white">{order.code}</td>
-                    <td className="p-3 font-sans">
-                      <strong className="text-white">{order.receiver_name}</strong>
-                      <p className="text-[11px] text-zinc-500 font-mono">{order.receiver_phone}</p>
-                    </td>
-                    <td className="p-3">
-                      {order.items.map((it) => (
-                        <div key={it.id} className="text-[11px] text-zinc-400">
-                          {it.product_name} x{it.quantity}
-                        </div>
-                      ))}
-                    </td>
-                    <td className="p-3">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
-                        order.status === 'packing'
-                          ? 'bg-amber-950 text-amber-300 border-amber-800'
-                          : order.status === 'shipping'
-                          ? 'bg-blue-950 text-blue-300 border-blue-800'
-                          : order.status === 'completed'
-                          ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
-                          : 'bg-zinc-900 text-zinc-400 border-zinc-800'
-                      }`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right space-x-1.5">
-                      {order.status === 'processing' && (
-                        <button
-                          onClick={() => handleAdvanceOrderStatus(order.id, 'packing')}
-                          className="px-2.5 py-1 bg-amber-400 text-black font-bold uppercase text-[10px] cursor-pointer"
-                        >
-                          Chuyển Đóng Gói (packing)
-                        </button>
-                      )}
+              {orders.filter((o) => String(o.status || '').toLowerCase() !== 'cancelled').length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-zinc-500 font-mono">
+                    <Truck className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
+                    <p className="text-sm text-zinc-400 font-bold uppercase tracking-wider">
+                      Hiện tại không có đơn hàng nào trong luồng vận hành kho
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      Khi CSKH xác nhận đơn hàng mới (chuyển sang processing), đơn hàng sẽ lập tức chuyển sang cho Kho xử lý đóng gói và xuất kho.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                orders
+                  .filter((o) => String(o.status || '').toLowerCase() !== 'cancelled')
+                  .map((order) => {
+                    const orderId = order.id || order.order_id;
+                    const orderCode = order.code || order.order_code || 'ORD-UNKNOWN';
+                    const customerName = order.receiver_name || order.customer_name || order.recipient_name || 'Khách hàng';
+                    const customerPhone = order.receiver_phone || order.customer_phone || order.recipient_phone || '---';
 
-                      {order.status === 'packing' && (
-                        <button
-                          onClick={() => setExportModal({ open: true, order, carrierId: 1, trackingCode: '' })}
-                          className="px-2.5 py-1 bg-white text-black font-bold uppercase text-[10px] cursor-pointer"
-                        >
-                          Lập Phiếu Xuất & Giao Hàng
-                        </button>
-                      )}
+                    return (
+                      <tr key={orderId || orderCode} className="hover:bg-zinc-900/40 transition-colors">
+                        <td className="p-3 font-bold text-white">{orderCode}</td>
+                        <td className="p-3 font-sans">
+                          <strong className="text-white block">{customerName}</strong>
+                          <p className="text-[11px] text-zinc-500 font-mono mt-0.5">{customerPhone}</p>
+                        </td>
+                        <td className="p-3">
+                          {(order.items || []).length > 0 ? (
+                            order.items.map((it, idx) => (
+                              <div key={it.id || idx} className="text-[11px] text-zinc-400">
+                                • {it.product_name || it.name || 'Sản phẩm'} {it.size ? `(${it.size})` : ''} x{it.quantity || 1}
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-[11px] text-zinc-500 italic">Chi tiết 1 sản phẩm</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
+                            order.status === 'packing'
+                              ? 'bg-amber-950 text-amber-300 border-amber-800'
+                              : order.status === 'shipping'
+                              ? 'bg-blue-950 text-blue-300 border-blue-800'
+                              : order.status === 'completed'
+                              ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                              : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right space-x-1.5">
+                          {order.status === 'processing' && (
+                            <button
+                              onClick={() => handleAdvanceOrderStatus(orderId, 'packing')}
+                              className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-black font-bold uppercase text-[10px] cursor-pointer"
+                            >
+                              Chuyển Đóng Gói (packing)
+                            </button>
+                          )}
 
-                      {order.status === 'shipping' && (
-                        <button
-                          onClick={() => handleAdvanceOrderStatus(order.id, 'completed')}
-                          className="px-2.5 py-1 bg-emerald-500 text-black font-bold uppercase text-[10px] cursor-pointer"
-                        >
-                          Giao Thành Công (completed)
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                          {order.status === 'packing' && (
+                            <button
+                              onClick={() => setExportModal({ open: true, order, carrierId: 1, trackingCode: '' })}
+                              className="px-2.5 py-1 bg-white hover:bg-zinc-200 text-black font-bold uppercase text-[10px] cursor-pointer"
+                            >
+                              Lập Phiếu Xuất & Giao Hàng
+                            </button>
+                          )}
+
+                          {order.status === 'shipping' && (
+                            <button
+                              onClick={() => handleAdvanceOrderStatus(orderId, 'completed')}
+                              className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase text-[10px] cursor-pointer"
+                            >
+                              Giao Thành Công (completed)
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+              )}
             </tbody>
           </table>
         </div>

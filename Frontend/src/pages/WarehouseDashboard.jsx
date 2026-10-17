@@ -8,7 +8,8 @@ import toast from 'react-hot-toast';
 export default function WarehouseDashboard() {
   const { user } = useAuthStore();
   const { products, goodsReceipts, goodsIssues, stockMovements, createGoodsReceipt, createGoodsIssue, confirmReturnReceipt } = useDbStore();
-  const { orders } = useOrderStore();
+  const rawOrders = useOrderStore((state) => state.orders);
+  const orders = Array.isArray(rawOrders) ? rawOrders : [];
 
   const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'receipt' | 'returns' | 'movements'
 

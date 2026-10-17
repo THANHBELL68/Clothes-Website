@@ -275,8 +275,12 @@ export default function CheckoutPage() {
       const createdOrder = createOrderInStore({
         items: itemsToCheckout,
         address: {
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          customer_email: customerEmail,
           receiver_name: recipientName,
           phone: recipientPhone,
+          recipient_phone: recipientPhone,
           province,
           district,
           ward,

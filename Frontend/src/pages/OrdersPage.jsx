@@ -82,11 +82,31 @@ export default function OrdersPage() {
   const [trackedOrder, setTrackedOrder] = useState(null);
   const [searchAttempted, setSearchAttempted] = useState(Boolean(initialCode));
 
+  // Lắng nghe sự kiện đồng bộ đơn hàng khi CSKH xác nhận hoặc chuyển trạng thái
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        if (useOrderStore.persist?.rehydrate) {
+          useOrderStore.persist.rehydrate();
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('shop_orders_updated', handleSync);
+    window.addEventListener('focus', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('shop_orders_updated', handleSync);
+      window.removeEventListener('focus', handleSync);
+    };
+  }, []);
+
   // Gộp danh sách đơn hàng mẫu và đơn từ store
   const allOrdersList = useMemo(() => {
-    const formattedStoreOrders = storeOrders.map((o) => ({
-      order_id: o.id,
-      order_code: o.code,
+    const rawList = Array.isArray(storeOrders) ? storeOrders : [];
+    const formattedStoreOrders = rawList.map((o) => ({
+      order_id: o.id || o.order_id,
+      order_code: o.code || o.order_code,
       user_id: user?.id || null,
       is_buy_now: false,
       status: o.status,
@@ -94,27 +114,27 @@ export default function OrdersPage() {
       payment_status: o.payment_status,
       note: o.note || null,
       created_at: o.created_at,
-      updated_at: o.created_at,
-      customer_name: o.receiver_name,
-      customer_phone: o.receiver_phone,
-      customer_email: o.receiver_email || null,
-      recipient_name: o.receiver_name,
-      recipient_phone: o.receiver_phone,
-      province: 'Hà Nội',
-      district: 'Cầu Giấy',
-      ward: 'Dịch Vọng Hậu',
-      street_address: o.shipping_address,
+      updated_at: o.updated_at || o.created_at,
+      customer_name: o.customer_name || o.receiver_name || o.recipient_name || 'Khách hàng',
+      customer_phone: o.customer_phone || o.receiver_phone || o.recipient_phone || '',
+      customer_email: o.customer_email || o.receiver_email || null,
+      recipient_name: o.recipient_name || o.receiver_name || o.customer_name || 'Khách hàng',
+      recipient_phone: o.recipient_phone || o.receiver_phone || o.customer_phone || '',
+      province: o.province || 'Hà Nội',
+      district: o.district || 'Cầu Giấy',
+      ward: o.ward || 'Dịch Vọng Hậu',
+      street_address: o.street_address || o.shipping_address,
       subtotal: o.subtotal,
-      voucher_id: o.coupon?.id || null,
-      voucher_code: o.coupon?.code || null,
-      voucher_discount: o.coupon_discount || 0,
+      voucher_id: o.coupon?.id || o.voucher_id || null,
+      voucher_code: o.coupon?.code || o.voucher_code || null,
+      voucher_discount: o.coupon_discount || o.voucher_discount || 0,
       points_used: o.points_used || 0,
       points_discount: o.points_discount || 0,
       shipping_fee: o.shipping_fee || 0,
-      total_amount: o.total,
+      total_amount: o.total_amount !== undefined ? o.total_amount : (o.total || 0),
       shipping_carrier_id: 1,
-      shipping_carrier_name: 'Giao Hàng Nhanh (GHN)',
-      tracking_code: 'GHN' + String(o.id).slice(-8) + 'VN',
+      shipping_carrier_name: o.shipping_carrier_name || 'Giao Hàng Nhanh (GHN)',
+      tracking_code: o.tracking_code || ('GHN' + String(o.id || o.order_id).slice(-8) + 'VN'),
       shipped_at: o.status === 'shipping' || o.status === 'completed' ? o.created_at : null,
       delivered_at: o.status === 'completed' ? o.created_at : null,
       cancel_reason: o.cancel_reason || null,

@@ -8,7 +8,8 @@ import toast from 'react-hot-toast';
 export default function CskhDashboard() {
   const { user } = useAuthStore();
   const { reviews, moderateReview, logAudit } = useDbStore();
-  const { orders } = useOrderStore();
+  const rawOrders = useOrderStore((state) => state.orders);
+  const orders = Array.isArray(rawOrders) ? rawOrders : [];
 
   const [activeTab, setActiveTab] = useState('returns'); // 'returns' | 'reviews' | 'orders'
   const [rejectModal, setRejectModal] = useState({ open: false, order: null });
