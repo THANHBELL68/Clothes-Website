@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
@@ -32,6 +32,8 @@ import {
   Filter,
   RefreshCw,
   LogOut,
+  Globe,
+  User,
 } from 'lucide-react';
 import {
   useAuthStore,
@@ -133,7 +135,7 @@ export default function AdminDashboard() {
     if (userPermissions.includes('ORDER_CONFIRM_CANCEL')) {
       tabs.push({
         id: 'cskh_orders',
-        label: `Xác Nhận Đơn Hàng${pendingOrdersCount > 0 ? ` (${pendingOrdersCount})` : ''}`,
+        label: `Quản Lý Đơn Hàng${pendingOrdersCount > 0 ? ` (${pendingOrdersCount} chờ)` : ''}`,
         icon: CheckCircle,
         module: 'CSKH',
         badge: pendingOrdersCount,
@@ -224,6 +226,68 @@ export default function AdminDashboard() {
 
   // Modal hiển thị danh sách quyền chi tiết từ v_user_permissions
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+
+  // Bộ lọc trạng thái & tìm kiếm cho màn hình Quản lý đơn hàng (CSKH & Admin)
+  const [cskhOrderFilter, setCskhOrderFilter] = useState('all'); // 'all' | 'pending' | 'completed' | 'cancelled'
+  const [cskhOrderSearch, setCskhOrderSearch] = useState('');
+
+  // Bộ lọc tiến độ đơn hàng Kho
+  const [whOrderFilter, setWhOrderFilter] = useState('all'); // 'all' | 'pending' | 'completed'
+
+  // Phân loại đơn hàng đang chờ vs đã xong
+  const cskhPendingOrders = useMemo(() => {
+    return (orders || []).filter((o) => {
+      const st = String(o.status || '').toLowerCase();
+      return st === 'new' || st === 'processing' || st === 'packing' || st === 'shipping';
+    });
+  }, [orders]);
+
+  const cskhNewOrdersCount = useMemo(() => {
+    return (orders || []).filter((o) => String(o.status || '').toLowerCase() === 'new').length;
+  }, [orders]);
+
+  const cskhCompletedOrders = useMemo(() => {
+    return (orders || []).filter((o) => String(o.status || '').toLowerCase() === 'completed');
+  }, [orders]);
+
+  const cskhCancelledOrders = useMemo(() => {
+    return (orders || []).filter((o) => String(o.status || '').toLowerCase() === 'cancelled');
+  }, [orders]);
+
+  const filteredCskhOrders = useMemo(() => {
+    let list = orders || [];
+    if (cskhOrderFilter === 'pending') {
+      list = cskhPendingOrders;
+    } else if (cskhOrderFilter === 'completed') {
+      list = cskhCompletedOrders;
+    } else if (cskhOrderFilter === 'cancelled') {
+      list = cskhCancelledOrders;
+    }
+
+    if (cskhOrderSearch.trim()) {
+      const kw = cskhOrderSearch.trim().toLowerCase();
+      list = list.filter((o) => {
+        const code = String(o.code || o.order_code || '').toLowerCase();
+        const phone = String(o.receiver_phone || o.customer_phone || o.recipient_phone || '').toLowerCase();
+        const name = String(o.receiver_name || o.customer_name || o.recipient_name || '').toLowerCase();
+        const itemsStr = (o.items || []).map((it) => it.product_name || it.name || '').join(' ').toLowerCase();
+        return code.includes(kw) || phone.includes(kw) || name.includes(kw) || itemsStr.includes(kw);
+      });
+    }
+
+    return list;
+  }, [orders, cskhOrderFilter, cskhOrderSearch, cskhPendingOrders, cskhCompletedOrders, cskhCancelledOrders]);
+
+  // Bộ lọc tiến độ vận hành kho
+  const filteredWhOrders = useMemo(() => {
+    let list = (orders || []).filter((o) => String(o.status || '').toLowerCase() !== 'cancelled');
+    if (whOrderFilter === 'pending') {
+      list = list.filter((o) => ['processing', 'packing', 'shipping'].includes(String(o.status || '').toLowerCase()));
+    } else if (whOrderFilter === 'completed') {
+      list = list.filter((o) => String(o.status || '').toLowerCase() === 'completed');
+    }
+    return list;
+  }, [orders, whOrderFilter]);
 
   // States cho các form thao tác
   // Modal từ chối đổi trả (bắt buộc reject_reason theo DB check constraint)
@@ -579,14 +643,28 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Nút Xem Giao Diện Cửa Hàng Bán Lẻ (Dành cho Khách) */}
+          <button
+            onClick={() => {
+              switchRolePersona('CUSTOMER');
+              navigate('/');
+              toast.success('Đã chuyển sang giao diện Khách Hàng (Storefront)!');
+            }}
+            className="px-3 py-2 bg-emerald-950/50 border border-emerald-600/70 hover:bg-emerald-500 hover:text-black text-emerald-300 font-mono text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+            title="Chuyển sang vai trò Khách hàng để xem trang bán lẻ"
+          >
+            <Globe className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">XEM CỬA HÀNG</span>
+          </button>
+
           <button
             onClick={() => {
               logout();
-              navigate('/staff/login');
-              toast.success('Đã đăng xuất khỏi Cổng Nội Bộ!');
+              navigate('/');
+              toast.success('Đã đăng xuất khỏi Cổng Quản Trị và trở về Cửa Hàng!');
             }}
             className="px-3 py-2 bg-zinc-900 border border-zinc-700 hover:border-rose-500 hover:bg-rose-950/40 hover:text-rose-300 text-zinc-300 font-mono text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
-            title="Đăng xuất khỏi hệ thống quản trị"
+            title="Đăng xuất khỏi hệ thống quản trị và quay về trang chủ"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">ĐĂNG XUẤT</span>
@@ -603,6 +681,19 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => {
+              switchRolePersona('CUSTOMER');
+              navigate('/');
+              toast.success('Đã chuyển sang vai trò: CUSTOMER (Khách hàng)!');
+            }}
+            className="px-3 py-1.5 border border-sky-800 bg-sky-950/60 hover:bg-sky-500 hover:text-black text-sky-300 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
+            title="Chuyển sang Khách hàng để trải nghiệm mua sắm"
+          >
+            <User className="w-3 h-3 text-sky-400" />
+            <span>CUSTOMER (KHÁCH HÀNG)</span>
+          </button>
+
           <button
             onClick={() => {
               switchRolePersona('CS_STAFF');
@@ -681,17 +772,17 @@ export default function AdminDashboard() {
       {/* 4. CÁC MÀN HÌNH CHỨC NĂNG PHÂN QUYỀN */}
       {/* ========================================================================= */}
 
-      {/* === MODULE CSKH 1: XÁC NHẬN ĐƠN HÀNG (new -> processing) === */}
+      {/* === MODULE CSKH 1: QUẢN LÝ ĐƠN HÀNG TOÀN DIỆN (ĐANG CHỜ & ĐÃ XONG) === */}
       {activeTab === 'cskh_orders' && (
         <div className="bg-[#0d0d0d] border border-zinc-800 p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-3 gap-3">
             <div>
               <h2 className="font-mono text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-emerald-400" />
-                MÀN HÌNH XÁC NHẬN ĐƠN HÀNG MỚI (new &rarr; processing)
+                QUẢN LÝ ĐƠN HÀNG TOÀN SÀN // CSKH & ĐIỀU PHỐI
               </h2>
               <p className="font-mono text-xs text-zinc-400 mt-0.5">
-                Quyền thực thi: <code className="text-emerald-400">ORDER_CONFIRM_CANCEL</code>. Đơn ở trạng thái <code>new</code> cần CSKH gọi điện hoặc xác thực thông tin trước khi chuyển sang đóng gói.
+                Hiển thị trực tiếp các đơn hàng đang chờ xử lý và đơn hàng đã hoàn tất (không cần tra cứu thủ công).
               </p>
             </div>
 
@@ -713,6 +804,80 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* BỘ LỌC TRẠNG THÁI & TÌM KIẾM NHANH CHO QUẢN LÝ ĐƠN HÀNG */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3 font-mono text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                onClick={() => setCskhOrderFilter('all')}
+                className={`px-3 py-1.5 uppercase font-bold tracking-wider border cursor-pointer transition-all ${
+                  cskhOrderFilter === 'all'
+                    ? 'bg-white text-black border-white shadow-sm'
+                    : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'
+                }`}
+              >
+                TẤT CẢ ({orders.length})
+              </button>
+
+              <button
+                onClick={() => setCskhOrderFilter('pending')}
+                className={`px-3 py-1.5 uppercase font-bold tracking-wider border cursor-pointer transition-all flex items-center gap-1.5 ${
+                  cskhOrderFilter === 'pending'
+                    ? 'bg-amber-400 text-black border-amber-300 shadow-sm'
+                    : 'bg-zinc-900 text-amber-300 border-zinc-800 hover:border-amber-700'
+                }`}
+              >
+                <span>ĐANG CHỜ ({cskhPendingOrders.length})</span>
+                {cskhNewOrdersCount > 0 && (
+                  <span className="px-1.5 py-0.2 bg-amber-500 text-black text-[9px] font-black rounded-xs animate-pulse">
+                    {cskhNewOrdersCount} MỚI
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setCskhOrderFilter('completed')}
+                className={`px-3 py-1.5 uppercase font-bold tracking-wider border cursor-pointer transition-all flex items-center gap-1.5 ${
+                  cskhOrderFilter === 'completed'
+                    ? 'bg-emerald-500 text-black border-emerald-400 shadow-sm'
+                    : 'bg-zinc-900 text-emerald-400 border-zinc-800 hover:border-emerald-700'
+                }`}
+              >
+                <span>ĐÃ XONG ({cskhCompletedOrders.length})</span>
+              </button>
+
+              <button
+                onClick={() => setCskhOrderFilter('cancelled')}
+                className={`px-3 py-1.5 uppercase font-bold tracking-wider border cursor-pointer transition-all ${
+                  cskhOrderFilter === 'cancelled'
+                    ? 'bg-rose-600 text-white border-rose-500 shadow-sm'
+                    : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-rose-300'
+                }`}
+              >
+                ĐÃ HỦY ({cskhCancelledOrders.length})
+              </button>
+            </div>
+
+            {/* Quick search input */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Lọc nhanh mã đơn, SĐT..."
+                value={cskhOrderSearch}
+                onChange={(e) => setCskhOrderSearch(e.target.value)}
+                className="w-full bg-[#141414] border border-zinc-800 pl-8 pr-7 py-1.5 text-white placeholder:text-zinc-600 text-xs focus:outline-none focus:border-zinc-500"
+              />
+              {cskhOrderSearch && (
+                <button
+                  onClick={() => setCskhOrderSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left font-mono text-xs">
               <thead className="bg-[#141414] text-zinc-400 uppercase border-b border-zinc-800">
@@ -723,23 +888,25 @@ export default function AdminDashboard() {
                   <th className="p-3">Sản Phẩm</th>
                   <th className="p-3">Tổng Tiền</th>
                   <th className="p-3">Trạng Thái</th>
-                  <th className="p-3 text-right">Thao Tác CSKH</th>
+                  <th className="p-3 text-right">Thao Tác Quản Lý</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {orders.filter((o) => {
-                  const st = String(o.status || '').toLowerCase();
-                  return st === 'new' || st === 'processing';
-                }).length === 0 ? (
+                {filteredCskhOrders.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-10 text-center text-zinc-500 font-mono">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <Package className="w-10 h-10 text-zinc-600" />
                         <p className="text-sm text-zinc-300 font-bold uppercase tracking-wider">
-                          Hiện tại chưa có đơn hàng nào cần xác nhận (0 đơn chờ)
-                        </p>
-                        <p className="text-xs text-zinc-500 max-w-md">
-                          Khi khách hàng đặt hàng từ trang Checkout (cả thành viên lẫn khách vãng lai), đơn hàng sẽ lập tức xuất hiện tại đây theo thời gian thực.
+                          {cskhOrderSearch
+                            ? `Không tìm thấy đơn hàng nào khớp với "${cskhOrderSearch}"`
+                            : cskhOrderFilter === 'pending'
+                            ? 'Hiện tại không có đơn hàng nào đang chờ xử lý'
+                            : cskhOrderFilter === 'completed'
+                            ? 'Hiện tại chưa có đơn hàng nào đã hoàn tất'
+                            : cskhOrderFilter === 'cancelled'
+                            ? 'Không có đơn hàng nào bị hủy'
+                            : 'Chưa có đơn hàng nào trong hệ thống'}
                         </p>
                         <div className="flex gap-2.5 pt-2">
                           <button
@@ -759,88 +926,158 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ) : (
-                  orders
-                    .filter((o) => {
-                      const st = String(o.status || '').toLowerCase();
-                      return st === 'new' || st === 'processing';
-                    })
-                    .map((order) => {
-                      const orderCode = order.code || order.order_code || 'ORD-UNKNOWN';
-                      const customerName = order.receiver_name || order.customer_name || order.recipient_name || 'Khách vãng lai';
-                      const customerPhone = order.receiver_phone || order.customer_phone || order.recipient_phone || '---';
-                      const shippingAddress = order.shipping_address || order.street_address || 'Địa chỉ giao hàng';
-                      const totalVal = order.total !== undefined ? order.total : (order.total_amount || 0);
-                      const isNew = String(order.status).toLowerCase() === 'new';
+                  filteredCskhOrders.map((order) => {
+                    const orderId = order.id || order.order_id;
+                    const orderCode = order.code || order.order_code || 'ORD-UNKNOWN';
+                    const customerName = order.receiver_name || order.customer_name || order.recipient_name || 'Khách vãng lai';
+                    const customerPhone = order.receiver_phone || order.customer_phone || order.recipient_phone || '---';
+                    const shippingAddress = order.shipping_address || order.street_address || 'Địa chỉ giao hàng';
+                    const totalVal = order.total !== undefined ? order.total : (order.total_amount || 0);
+                    const st = String(order.status || '').toLowerCase();
+                    const isNew = st === 'new';
+                    const isProcessing = st === 'processing';
+                    const isPacking = st === 'packing';
+                    const isShipping = st === 'shipping';
+                    const isCompleted = st === 'completed';
+                    const isCancelled = st === 'cancelled';
 
-                      return (
-                        <tr key={order.id || order.order_id || orderCode} className="hover:bg-zinc-900/40 transition-colors">
-                          <td className="p-3">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-white text-xs">{orderCode}</span>
-                              {isNew && (
-                                <span className="px-1.5 py-0.2 bg-amber-500 text-black text-[9px] font-black uppercase tracking-wider animate-pulse">
-                                  MỚI
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-zinc-500 mt-0.5">
-                              {new Date(order.created_at || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
-                              {new Date(order.created_at || Date.now()).toLocaleDateString('vi-VN')}
-                            </p>
-                          </td>
-                          <td className="p-3">
-                            <strong className="text-white font-sans block">{customerName}</strong>
-                            <p className="text-[11px] text-emerald-400 font-mono mt-0.5">{customerPhone}</p>
-                          </td>
-                          <td className="p-3 max-w-xs truncate text-zinc-300" title={shippingAddress}>
-                            {shippingAddress}
-                          </td>
-                          <td className="p-3">
-                            {(order.items || []).length > 0 ? (
-                              order.items.map((it, idx) => (
-                                <div key={it.id || idx} className="text-[11px] text-zinc-300">
-                                  • {it.product_name || it.name || 'Sản phẩm'} {it.size ? `(${it.size}${it.color ? '/' + it.color : ''})` : ''} x{it.quantity || 1}
-                                </div>
-                              ))
-                            ) : (
-                              <span className="text-[11px] text-zinc-500 italic">Chi tiết 1 mặt hàng</span>
+                    return (
+                      <tr key={orderId || orderCode} className="hover:bg-zinc-900/40 transition-colors">
+                        <td className="p-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-white text-xs">{orderCode}</span>
+                            {isNew && (
+                              <span className="px-1.5 py-0.2 bg-amber-500 text-black text-[9px] font-black uppercase tracking-wider animate-pulse">
+                                MỚI
+                              </span>
                             )}
-                          </td>
-                          <td className="p-3 font-bold text-emerald-400 text-sm whitespace-nowrap">
-                            {Number(totalVal).toLocaleString('vi-VN')}₫
-                          </td>
-                          <td className="p-3 whitespace-nowrap">
-                            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
-                              isNew
-                                ? 'bg-amber-950/60 text-amber-300 border-amber-800'
-                                : 'bg-blue-950/60 text-blue-300 border-blue-800'
-                            }`}>
-                              {isNew ? '01 // MỚI TẠO' : '02 // ĐANG XỬ LÝ'}
-                            </span>
-                          </td>
-                          <td className="p-3 text-right space-x-2 whitespace-nowrap">
-                            {isNew ? (
+                          </div>
+                          <p className="text-[10px] text-zinc-500 mt-0.5">
+                            {new Date(order.created_at || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{' '}
+                            {new Date(order.created_at || Date.now()).toLocaleDateString('vi-VN')}
+                          </p>
+                        </td>
+                        <td className="p-3">
+                          <strong className="text-white font-sans block">{customerName}</strong>
+                          <p className="text-[11px] text-emerald-400 font-mono mt-0.5">{customerPhone}</p>
+                        </td>
+                        <td className="p-3 max-w-xs truncate text-zinc-300" title={shippingAddress}>
+                          {shippingAddress}
+                        </td>
+                        <td className="p-3">
+                          {(order.items || []).length > 0 ? (
+                            order.items.map((it, idx) => (
+                              <div key={it.id || idx} className="text-[11px] text-zinc-300">
+                                • {it.product_name || it.name || 'Sản phẩm'} {it.size ? `(${it.size}${it.color ? '/' + it.color : ''})` : ''} x{it.quantity || 1}
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-[11px] text-zinc-500 italic">Chi tiết 1 mặt hàng</span>
+                          )}
+                        </td>
+                        <td className="p-3 font-bold text-emerald-400 text-sm whitespace-nowrap">
+                          {Number(totalVal).toLocaleString('vi-VN')}₫
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
+                            isNew
+                              ? 'bg-amber-950/60 text-amber-300 border-amber-800'
+                              : isProcessing
+                              ? 'bg-blue-950/60 text-blue-300 border-blue-800'
+                              : isPacking
+                              ? 'bg-amber-950 text-amber-400 border-amber-800'
+                              : isShipping
+                              ? 'bg-sky-950 text-sky-300 border-sky-800'
+                              : isCompleted
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                              : 'bg-rose-950/60 text-rose-300 border-rose-800'
+                          }`}>
+                            {isNew
+                              ? '01 // MỚI TẠO'
+                              : isProcessing
+                              ? '02 // ĐANG XỬ LÝ'
+                              : isPacking
+                              ? '03 // ĐÓNG GÓI'
+                              : isShipping
+                              ? '04 // ĐANG GIAO'
+                              : isCompleted
+                              ? '05 // ĐÃ HOÀN TẤT'
+                              : 'ĐÃ HỦY'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right space-x-2 whitespace-nowrap">
+                          {isNew && (
+                            <>
                               <button
                                 onClick={() => handleConfirmOrder(order)}
                                 className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-mono text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-sm"
                               >
                                 XÁC NHẬN ĐƠN
                               </button>
-                            ) : (
-                              <span className="text-[11px] text-zinc-500 italic">Đã xác nhận &rarr; Chờ kho</span>
-                            )}
+                              <button
+                                onClick={() => handleCancelOrder(orderId, orderCode)}
+                                className="px-2.5 py-1.5 bg-zinc-900 hover:bg-rose-950 border border-zinc-700 hover:border-rose-800 text-zinc-400 hover:text-rose-400 font-mono text-[11px] cursor-pointer"
+                              >
+                                Hủy
+                              </button>
+                            </>
+                          )}
 
-                            <button
-                              onClick={() => handleCancelOrder(order.id || order.order_id, orderCode)}
-                              className="px-2.5 py-1.5 bg-zinc-900 hover:bg-rose-950 border border-zinc-700 hover:border-rose-800 text-zinc-400 hover:text-rose-400 font-mono text-[11px] cursor-pointer"
-                              title="Hủy đơn theo yêu cầu của khách"
-                            >
-                              Hủy
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
+                          {isProcessing && (
+                            <>
+                              <button
+                                onClick={() => handleAdvanceOrderStatus(orderId, 'packing')}
+                                className="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-black font-mono text-[11px] font-bold uppercase cursor-pointer"
+                                title="Chuyển sang bộ phận Kho để đóng gói"
+                              >
+                                Chuyển Kho Đóng Gói
+                              </button>
+                              <button
+                                onClick={() => handleCancelOrder(orderId, orderCode)}
+                                className="px-2.5 py-1.5 bg-zinc-900 hover:bg-rose-950 border border-zinc-700 hover:border-rose-800 text-zinc-400 hover:text-rose-400 font-mono text-[11px] cursor-pointer"
+                              >
+                                Hủy
+                              </button>
+                            </>
+                          )}
+
+                          {isPacking && (
+                            <span className="text-[11px] text-amber-400 font-mono">
+                              Kho đang đóng gói...
+                            </span>
+                          )}
+
+                          {isShipping && (
+                            <span className="text-[11px] text-sky-400 font-mono">
+                              Đang vận chuyển (GHN)
+                            </span>
+                          )}
+
+                          {isCompleted && (
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="text-[11px] text-emerald-400 font-mono font-bold">
+                                ✓ Đã giao xong
+                              </span>
+                              {order.return_request && (
+                                <button
+                                  onClick={() => setActiveTab('cskh_returns')}
+                                  className="px-2 py-1 bg-amber-950 text-amber-300 border border-amber-800 text-[10px] uppercase font-bold"
+                                >
+                                  Có yêu cầu đổi trả
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {isCancelled && (
+                            <span className="text-[11px] text-rose-400 font-mono" title={order.cancel_reason}>
+                              Đã hủy: {order.cancel_reason || 'Khách yêu cầu'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1563,6 +1800,42 @@ export default function AdminDashboard() {
             </p>
           </div>
 
+          {/* BỘ LỌC TIẾN ĐỘ KHO: TẤT CẢ // ĐANG XỬ LÝ & ĐÓNG GÓI // ĐÃ GIAO XONG */}
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-zinc-800 pb-3 font-mono text-xs">
+            <button
+              onClick={() => setWhOrderFilter('all')}
+              className={`px-3 py-1.5 uppercase font-bold tracking-wider border cursor-pointer transition-all ${
+                whOrderFilter === 'all'
+                  ? 'bg-white text-black border-white shadow-sm'
+                  : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'
+              }`}
+            >
+              TẤT CẢ TIẾN ĐỘ ({(orders || []).filter((o) => String(o.status || '').toLowerCase() !== 'cancelled').length})
+            </button>
+
+            <button
+              onClick={() => setWhOrderFilter('pending')}
+              className={`px-3 py-1.5 uppercase font-bold tracking-wider border cursor-pointer transition-all flex items-center gap-1.5 ${
+                whOrderFilter === 'pending'
+                  ? 'bg-amber-400 text-black border-amber-300 shadow-sm'
+                  : 'bg-zinc-900 text-amber-300 border-zinc-800 hover:border-amber-700'
+              }`}
+            >
+              <span>ĐANG XỬ LÝ & ĐÓNG GÓI ({(orders || []).filter((o) => ['processing', 'packing', 'shipping'].includes(String(o.status || '').toLowerCase())).length})</span>
+            </button>
+
+            <button
+              onClick={() => setWhOrderFilter('completed')}
+              className={`px-3 py-1.5 uppercase font-bold tracking-wider border cursor-pointer transition-all flex items-center gap-1.5 ${
+                whOrderFilter === 'completed'
+                  ? 'bg-emerald-500 text-black border-emerald-400 shadow-sm'
+                  : 'bg-zinc-900 text-emerald-400 border-zinc-800 hover:border-emerald-700'
+              }`}
+            >
+              <span>ĐÃ GIAO XONG ({(orders || []).filter((o) => String(o.status || '').toLowerCase() === 'completed').length})</span>
+            </button>
+          </div>
+
           <table className="w-full text-left font-mono text-xs">
             <thead className="bg-[#141414] text-zinc-400 uppercase border-b border-zinc-800">
               <tr>
@@ -1574,12 +1847,16 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
-              {orders.filter((o) => String(o.status || '').toLowerCase() !== 'cancelled').length === 0 ? (
+              {filteredWhOrders.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-zinc-500 font-mono">
                     <Truck className="w-8 h-8 text-zinc-600 mx-auto mb-2" />
                     <p className="text-sm text-zinc-400 font-bold uppercase tracking-wider">
-                      Hiện tại không có đơn hàng nào trong luồng vận hành kho
+                      {whOrderFilter === 'pending'
+                        ? 'Không có đơn nào đang chờ xử lý hay đóng gói'
+                        : whOrderFilter === 'completed'
+                        ? 'Chưa có đơn hàng nào đã giao hoàn tất'
+                        : 'Hiện tại không có đơn hàng nào trong luồng vận hành kho'}
                     </p>
                     <p className="text-xs text-zinc-500 mt-1">
                       Khi CSKH xác nhận đơn hàng mới (chuyển sang processing), đơn hàng sẽ lập tức chuyển sang cho Kho xử lý đóng gói và xuất kho.
@@ -1587,8 +1864,7 @@ export default function AdminDashboard() {
                   </td>
                 </tr>
               ) : (
-                orders
-                  .filter((o) => String(o.status || '').toLowerCase() !== 'cancelled')
+                filteredWhOrders
                   .map((order) => {
                     const orderId = order.id || order.order_id;
                     const orderCode = order.code || order.order_code || 'ORD-UNKNOWN';

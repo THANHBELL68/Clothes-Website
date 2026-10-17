@@ -256,7 +256,7 @@ export default function Navbar({ onOpenCart, onOpenSearch }) {
             onClick={() => setMobileMenuOpen(false)}
             className="block py-2 border-b border-zinc-900 text-zinc-300 hover:text-white uppercase tracking-wider"
           >
-            TRA CỨU ĐƠN HÀNG
+            THEO DÕI ĐƠN HÀNG
           </Link>
 
           <div className="pt-2 grid grid-cols-2 gap-2">

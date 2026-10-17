@@ -21,9 +21,13 @@ import {
   FileText,
   User,
   Phone,
+  Filter,
+  X,
+  RefreshCw,
 } from 'lucide-react';
 import AetherNavbar from '../components/AetherNavbar';
 import { useOrderStore } from '../store/orderStore';
+import { useAuthStore } from '../store/authStore';
 import {
   MOCK_ORDER_DETAILS,
   MOCK_ORDER_ITEMS,
@@ -57,30 +61,14 @@ export default function OrdersPage() {
   const submitReturnRequestStore = useOrderStore((state) => state.submitReturnRequest);
   const submitReviewStore = useOrderStore((state) => state.submitReview);
 
-  // User đăng nhập
-  const [user, setUser] = useState(null);
+  // User đăng nhập từ useAuthStore
+  const authUser = useAuthStore((state) => state.user);
+  const user = authUser;
   const isMember = Boolean(user);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('shop_auth_user');
-      if (stored) setUser(JSON.parse(stored));
-    } catch {
-      setUser(null);
-    }
-  }, []);
-
-  // Chế độ xem: 'my_orders' (Thành viên) hoặc 'guest_tracking' (Khách vãng lai tra cứu)
-  const [activeTab, setActiveTab] = useState(initialCode ? 'guest_tracking' : isMember ? 'my_orders' : 'guest_tracking');
-
-  // Form tra cứu khách vãng lai (order_code + customer_phone)
-  const [trackingForm, setTrackingForm] = useState({
-    order_code: initialCode,
-    customer_phone: initialPhone,
-  });
-
-  const [trackedOrder, setTrackedOrder] = useState(null);
-  const [searchAttempted, setSearchAttempted] = useState(Boolean(initialCode));
+  // Tab phân loại trạng thái: 'all' | 'pending' | 'completed' | 'cancelled'
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchKeyword, setSearchKeyword] = useState(initialCode || '');
 
   // Lắng nghe sự kiện đồng bộ đơn hàng khi CSKH xác nhận hoặc chuyển trạng thái
   useEffect(() => {
@@ -101,13 +89,13 @@ export default function OrdersPage() {
     };
   }, []);
 
-  // Gộp danh sách đơn hàng mẫu và đơn từ store
+  // Gộp danh sách đơn hàng mẫu và đơn từ store (loại bỏ trùng lặp mã đơn)
   const allOrdersList = useMemo(() => {
     const rawList = Array.isArray(storeOrders) ? storeOrders : [];
     const formattedStoreOrders = rawList.map((o) => ({
       order_id: o.id || o.order_id,
       order_code: o.code || o.order_code,
-      user_id: user?.id || null,
+      user_id: o.user_id || user?.id || null,
       is_buy_now: false,
       status: o.status,
       payment_method: o.payment_method,
@@ -145,63 +133,73 @@ export default function OrdersPage() {
       return_request: o.return_request || null,
     }));
 
-    return [...formattedStoreOrders, ...MOCK_ORDER_DETAILS];
+    const seenCodes = new Set();
+    const result = [];
+    for (const ord of formattedStoreOrders) {
+      const code = String(ord.order_code || ord.code || '').toUpperCase();
+      if (code && !seenCodes.has(code)) {
+        seenCodes.add(code);
+        result.push(ord);
+      }
+    }
+    for (const ord of MOCK_ORDER_DETAILS) {
+      const code = String(ord.order_code || ord.code || '').toUpperCase();
+      if (code && !seenCodes.has(code)) {
+        seenCodes.add(code);
+        result.push(ord);
+      }
+    }
+    return result;
   }, [storeOrders, user]);
 
-  // Xử lý tra cứu đơn hàng linh hoạt theo mã đơn hoặc số điện thoại
-  const performSearch = (targetCode, targetPhone) => {
-    const code = (targetCode !== undefined ? targetCode : trackingForm.order_code).trim().toUpperCase();
-    const phone = (targetPhone !== undefined ? targetPhone : trackingForm.customer_phone).trim().replace(/[\s\-\.]/g, '');
-
-    if (!code && !phone) {
-      toast.error('Vui lòng nhập Mã đơn hàng hoặc Số điện thoại để tra cứu!');
-      return;
-    }
-
-    setSearchAttempted(true);
-
-    const found = allOrdersList.find((ord) => {
-      const ordCode = (ord.order_code || ord.code || '').toUpperCase();
-      const ordPhone1 = (ord.customer_phone || '').replace(/[\s\-\.]/g, '');
-      const ordPhone2 = (ord.recipient_phone || '').replace(/[\s\-\.]/g, '');
-
-      // Nếu có cả 2: khớp mã đơn và khớp số điện thoại
-      if (code && phone) {
-        const matchCode = ordCode === code || ordCode.endsWith(code) || code.endsWith(ordCode);
-        const matchPhone = ordPhone1 === phone || ordPhone2 === phone || ordPhone1.endsWith(phone) || phone.endsWith(ordPhone1);
-        return matchCode && matchPhone;
-      }
-      // Nếu chỉ có mã đơn
-      if (code) {
-        return ordCode === code || ordCode.endsWith(code);
-      }
-      // Nếu chỉ có số điện thoại
-      if (phone) {
-        return ordPhone1 === phone || ordPhone2 === phone || ordPhone1.endsWith(phone);
-      }
-      return false;
+  // 1. ĐƠN ĐANG CHỜ (new, processing, packing, shipping)
+  const pendingOrders = useMemo(() => {
+    return allOrdersList.filter((o) => {
+      const st = String(o.status || '').toLowerCase();
+      return ['new', 'processing', 'packing', 'shipping'].includes(st);
     });
+  }, [allOrdersList]);
 
-    if (found) {
-      setTrackedOrder(found);
-      toast.success(`Đã tìm thấy đơn hàng [${found.order_code}]!`);
-    } else {
-      setTrackedOrder(null);
-      toast.error('Không tìm thấy đơn hàng nào khớp với thông tin đã nhập!');
+  // 2. ĐƠN ĐÃ XONG (completed)
+  const completedOrders = useMemo(() => {
+    return allOrdersList.filter((o) => String(o.status || '').toLowerCase() === 'completed');
+  }, [allOrdersList]);
+
+  // 3. ĐƠN HỦY / ĐỔI TRẢ (cancelled hoặc có yêu cầu đổi trả)
+  const cancelledOrders = useMemo(() => {
+    return allOrdersList.filter((o) => {
+      const st = String(o.status || '').toLowerCase();
+      return st === 'cancelled' || Boolean(o.return_request);
+    });
+  }, [allOrdersList]);
+
+  // 4. DANH SÁCH HIỂN THỊ TỰ ĐỘNG (Lọc theo tab trạng thái & lọc nhanh từ khóa nếu có)
+  const displayedOrders = useMemo(() => {
+    let list = allOrdersList;
+    if (statusFilter === 'pending') list = pendingOrders;
+    else if (statusFilter === 'completed') list = completedOrders;
+    else if (statusFilter === 'cancelled') list = cancelledOrders;
+
+    if (searchKeyword.trim()) {
+      const kw = searchKeyword.trim().toLowerCase();
+      list = list.filter((ord) => {
+        const code = String(ord.order_code || ord.code || '').toLowerCase();
+        const phone = String(ord.customer_phone || ord.recipient_phone || '').toLowerCase();
+        const name = String(ord.customer_name || ord.recipient_name || '').toLowerCase();
+        const itemsStr = (ord.items || []).map((it) => it.product_name || it.name || '').join(' ').toLowerCase();
+        return code.includes(kw) || phone.includes(kw) || name.includes(kw) || itemsStr.includes(kw);
+      });
     }
-  };
 
-  const handleTrackOrder = (e) => {
-    if (e) e.preventDefault();
-    performSearch();
-  };
+    return list;
+  }, [allOrdersList, pendingOrders, completedOrders, cancelledOrders, statusFilter, searchKeyword]);
 
-  // Tự động tìm kiếm ngay khi có query params từ Checkout hoặc URL
+  // Tự động nhận diện nếu có query params từ Checkout (?code=ORD-...)
   useEffect(() => {
-    if (initialCode || initialPhone) {
-      performSearch(initialCode, initialPhone);
+    if (initialCode) {
+      setSearchKeyword(initialCode);
     }
-  }, [initialCode, initialPhone]);
+  }, [initialCode]);
 
   // =========================================================================
   // XÁC THỰC MÃ OTP CHO KHÁCH VÃNG LAI TRƯỚC KHI HỦY HOẶC ĐỔI TRẢ
@@ -396,156 +394,184 @@ export default function OrdersPage() {
       <div className="pt-14 border-b border-zinc-800 bg-zinc-950/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase block">
-              ORDER MANAGEMENT // THEO DÕI ĐƠN HÀNG
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-mono text-[10px] tracking-widest text-zinc-400 uppercase">
+                ORDER MANAGEMENT // THEO DÕI ĐƠN HÀNG
+              </span>
+            </div>
             <h1 className="font-inter font-black text-2xl sm:text-3xl text-white tracking-tight mt-1">
               Theo Dõi & Quản Lý Đơn Hàng
             </h1>
+            <p className="font-mono text-xs text-zinc-400 mt-1">
+              Hệ thống tự động hiển thị đầy đủ các đơn hàng đang chờ xử lý và đơn hàng đã hoàn thành mà không cần phải tra cứu thủ công.
+            </p>
           </div>
 
-          {/* 2 Tabs: Đơn hàng thành viên vs Tra cứu khách vãng lai */}
-          <div className="flex items-center border border-zinc-800 bg-black p-1 font-mono text-xs">
-            {isMember && (
-              <button
-                onClick={() => setActiveTab('my_orders')}
-                className={`px-3 py-1.5 uppercase tracking-wider transition-colors cursor-pointer ${
-                  activeTab === 'my_orders'
-                    ? 'bg-white text-black font-bold'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                ĐƠN CỦA TÔI ({allOrdersList.length})
-              </button>
-            )}
-
-            <button
-              onClick={() => setActiveTab('guest_tracking')}
-              className={`px-3 py-1.5 uppercase tracking-wider transition-colors cursor-pointer ${
-                activeTab === 'guest_tracking'
-                  ? 'bg-white text-black font-bold'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              TRA CỨU VÃNG LAI (GUEST)
-            </button>
+          {/* Huy hiệu thông tin người dùng / trạng thái đồng bộ */}
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <div className="px-3 py-1.5 border border-zinc-800 bg-black/80 flex items-center gap-2 text-zinc-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>
+                {isMember ? `Thành viên: ${user?.full_name}` : 'Khách Mua Hàng // Đồng bộ thời gian thực'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
         
         {/* =====================================================================
-            TAB 1: FORM TRA CỨU CHO KHÁCH VÃNG LAI (MÃ ĐƠN + SỐ ĐIỆN THOẠI)
+            1. BỘ LỌC TRẠNG THÁI: TẤT CẢ // ĐANG CHỜ // ĐÃ XONG // HỦY
         ====================================================================== */}
-        {activeTab === 'guest_tracking' && (
-          <div className="space-y-8">
-            <div className="border border-zinc-800 bg-[#080808] p-6 sm:p-8 max-w-2xl mx-auto space-y-4">
-              <div className="border-b border-zinc-800 pb-3">
-                <span className="font-mono text-[10px] text-zinc-500 tracking-widest uppercase block">
-                  TRA CỨU DÀNH RIÊNG CHO KHÁCH VÃNG LAI
-                </span>
-                <h3 className="font-inter font-bold text-lg text-white">
-                  Nhập mã đơn hàng và số điện thoại đã đặt
-                </h3>
-              </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+          
+          {/* Status Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3.5 py-2 uppercase tracking-wider font-bold transition-all border cursor-pointer ${
+                statusFilter === 'all'
+                  ? 'bg-white text-black border-white shadow-sm'
+                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-white'
+              }`}
+            >
+              TẤT CẢ ({allOrdersList.length})
+            </button>
 
-              <form onSubmit={handleTrackOrder} className="space-y-4 font-mono text-xs">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-zinc-400 text-[10px] uppercase">
-                      MÃ ĐƠN HÀNG
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="VD: ORD-20261016-001"
-                      value={trackingForm.order_code}
-                      onChange={(e) =>
-                        setTrackingForm({ ...trackingForm, order_code: e.target.value })
-                      }
-                      className="w-full bg-zinc-950 border border-zinc-800 p-2.5 text-white text-xs uppercase placeholder:text-zinc-700 focus:outline-none focus:border-white"
-                    />
-                  </div>
+            <button
+              onClick={() => setStatusFilter('pending')}
+              className={`px-3.5 py-2 uppercase tracking-wider font-bold transition-all border cursor-pointer flex items-center gap-2 ${
+                statusFilter === 'pending'
+                  ? 'bg-amber-400 text-black border-amber-300 shadow-sm'
+                  : 'bg-zinc-950 text-amber-300/80 border-amber-900/40 hover:border-amber-700 hover:text-amber-200'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>ĐANG CHỜ ({pendingOrders.length})</span>
+            </button>
 
-                  <div className="space-y-1">
-                    <label className="text-zinc-400 text-[10px] uppercase">
-                      SỐ ĐIỆN THOẠI ĐẶT HÀNG
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="VD: 0912345678"
-                      value={trackingForm.customer_phone}
-                      onChange={(e) =>
-                        setTrackingForm({ ...trackingForm, customer_phone: e.target.value })
-                      }
-                      className="w-full bg-zinc-950 border border-zinc-800 p-2.5 text-white text-xs placeholder:text-zinc-700 focus:outline-none focus:border-white"
-                    />
-                  </div>
-                </div>
+            <button
+              onClick={() => setStatusFilter('completed')}
+              className={`px-3.5 py-2 uppercase tracking-wider font-bold transition-all border cursor-pointer flex items-center gap-2 ${
+                statusFilter === 'completed'
+                  ? 'bg-emerald-500 text-black border-emerald-400 shadow-sm'
+                  : 'bg-zinc-950 text-emerald-400/80 border-emerald-900/40 hover:border-emerald-700 hover:text-emerald-300'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>ĐÃ XONG ({completedOrders.length})</span>
+            </button>
 
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-xs font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                >
-                  <Search className="w-3.5 h-3.5" />
-                  <span>TRA CỨU ĐƠN HÀNG</span>
-                </button>
-              </form>
-            </div>
+            <button
+              onClick={() => setStatusFilter('cancelled')}
+              className={`px-3.5 py-2 uppercase tracking-wider font-bold transition-all border cursor-pointer flex items-center gap-2 ${
+                statusFilter === 'cancelled'
+                  ? 'bg-rose-600 text-white border-rose-500 shadow-sm'
+                  : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-rose-300'
+              }`}
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>ĐÃ HỦY / ĐỔI TRẢ ({cancelledOrders.length})</span>
+            </button>
+          </div>
 
-            {/* Kết quả tra cứu đơn hàng vãng lai */}
-            {searchAttempted && (
-              <div>
-                {trackedOrder ? (
-                  <OrderCard
-                    order={trackedOrder}
-                    onOpenCancel={openCancelModal}
-                    onOpenReturn={openReturnModal}
-                    onOpenReview={(item) =>
-                      setReviewModal({ open: true, order: trackedOrder, item })
-                    }
-                  />
-                ) : (
-                  <div className="p-12 text-center border border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-500">
-                    KHÔNG TÌM THẤY ĐƠN HÀNG PHÙ HỢP. VUI LÒNG KIỂM TRA LẠI MÃ ĐƠN VÀ SĐT.
-                  </div>
-                )}
-              </div>
+          {/* Quick Filter Search Box (Tùy chọn - lọc trực tiếp không cần bấm Tra cứu) */}
+          <div className="relative w-full md:w-80 font-mono text-xs">
+            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Lọc nhanh mã đơn, SĐT..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              className="w-full bg-[#0d0d0d] border border-zinc-800 pl-9 pr-8 py-2 text-white placeholder:text-zinc-600 text-xs focus:outline-none focus:border-zinc-500"
+            />
+            {searchKeyword && (
+              <button
+                onClick={() => setSearchKeyword('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white cursor-pointer"
+                title="Xóa bộ lọc"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
             )}
           </div>
-        )}
+        </div>
+
+        {/* Thông báo kết quả đang hiển thị */}
+        <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+          <span>
+            Đang hiển thị <strong className="text-white">{displayedOrders.length}</strong> đơn hàng{' '}
+            {statusFilter === 'pending'
+              ? 'đang chờ xử lý / vận chuyển'
+              : statusFilter === 'completed'
+              ? 'đã hoàn tất'
+              : statusFilter === 'cancelled'
+              ? 'đã hủy hoặc yêu cầu đổi trả'
+              : 'toàn bộ'}
+            {searchKeyword ? ` (khớp từ khóa "${searchKeyword}")` : ''}
+          </span>
+          <span className="hidden sm:inline text-zinc-600">
+            Click vào đơn hàng để xem chi tiết tiến độ hoặc gửi yêu cầu đổi/trả 7 ngày
+          </span>
+        </div>
 
         {/* =====================================================================
-            TAB 2: DANH SÁCH ĐƠN HÀNG CỦA THÀNH VIÊN
+            2. DANH SÁCH ĐƠN HÀNG HIỂN THỊ TRỰC TIẾP (KHÔNG CẦN TRA CỨU)
         ====================================================================== */}
-        {activeTab === 'my_orders' && (
-          <div className="space-y-6">
-            {allOrdersList.length === 0 ? (
-              <div className="p-16 text-center border border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-500 space-y-3">
-                <p>BẠN CHƯA CÓ ĐƠN HÀNG NÀO TRONG HỆ THỐNG.</p>
-                <Link
-                  to="/#catalog"
-                  className="inline-block px-4 py-2 border border-zinc-700 text-white tracking-widest uppercase hover:bg-zinc-900"
-                >
-                  [ XEM SẢN PHẨM // CATALOG ]
-                </Link>
+        <div className="space-y-6">
+          {displayedOrders.length === 0 ? (
+            <div className="p-14 text-center border border-zinc-800 bg-[#0c0c0c] font-mono text-xs text-zinc-400 space-y-3">
+              <Package className="w-10 h-10 text-zinc-600 mx-auto" />
+              <p className="text-sm font-bold text-white uppercase tracking-wider">
+                {searchKeyword
+                  ? `Không tìm thấy đơn hàng nào khớp với "${searchKeyword}"`
+                  : statusFilter === 'pending'
+                  ? 'Hiện tại không có đơn hàng nào đang chờ xử lý'
+                  : statusFilter === 'completed'
+                  ? 'Hiện tại chưa có đơn hàng nào hoàn tất'
+                  : statusFilter === 'cancelled'
+                  ? 'Không có đơn hàng nào đã hủy hoặc đổi trả'
+                  : 'Chưa có đơn hàng nào trong hệ thống'}
+              </p>
+              <p className="text-zinc-500 max-w-md mx-auto text-[11px]">
+                {searchKeyword
+                  ? 'Hãy thử kiểm tra lại số điện thoại hoặc mã đơn hàng, hoặc bấm xóa bộ lọc tìm kiếm.'
+                  : 'Các đơn hàng sau khi đặt thành công sẽ tự động hiển thị tại đây theo thời gian thực.'}
+              </p>
+              <div className="pt-2 flex justify-center gap-3">
+                {searchKeyword ? (
+                  <button
+                    onClick={() => setSearchKeyword('')}
+                    className="px-4 py-2 bg-zinc-900 border border-zinc-700 text-white font-bold tracking-wider uppercase hover:border-zinc-500 cursor-pointer"
+                  >
+                    XÓA TỪ KHÓA TÌM KIẾM
+                  </button>
+                ) : (
+                  <Link
+                    to="/#catalog"
+                    className="inline-block px-5 py-2.5 bg-white text-black font-bold tracking-widest uppercase hover:bg-zinc-200 transition-colors"
+                  >
+                    [ MUA SẮM NGAY // CATALOG ]
+                  </Link>
+                )}
               </div>
-            ) : (
-              allOrdersList.map((ord) => (
-                <OrderCard
-                  key={ord.order_id}
-                  order={ord}
-                  onOpenCancel={openCancelModal}
-                  onOpenReturn={openReturnModal}
-                  onOpenReview={(item) =>
-                    setReviewModal({ open: true, order: ord, item })
-                  }
-                />
-              ))
-            )}
-          </div>
-        )}
-
+            </div>
+          ) : (
+            displayedOrders.map((ord) => (
+              <OrderCard
+                key={ord.order_id || ord.order_code}
+                order={ord}
+                onOpenCancel={openCancelModal}
+                onOpenReturn={openReturnModal}
+                onOpenReview={(item) =>
+                  setReviewModal({ open: true, order: ord, item })
+                }
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {/* =========================================================================

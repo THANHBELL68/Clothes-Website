@@ -140,7 +140,7 @@ export default function Footer() {
             <ul className="space-y-2 text-zinc-400 text-[11px]">
               <li>
                 <Link to="/orders" className="hover:text-white transition-colors">
-                  TRA CỨU ĐƠN HÀNG (OTP / SĐT)
+                  THEO DÕI ĐƠN HÀNG
                 </Link>
               </li>
               <li>
