@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ShieldAlert,
   Users,
@@ -30,6 +31,7 @@ import {
   ChevronRight,
   Filter,
   RefreshCw,
+  LogOut,
 } from 'lucide-react';
 import {
   useAuthStore,
@@ -44,7 +46,8 @@ import { useChatStore } from '../store/chatStore';
 import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
-  const { user, allUsers, toggleUserActive, changeUserRole, switchRolePersona } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, allUsers, toggleUserActive, changeUserRole, switchRolePersona, logout } = useAuthStore();
   const {
     products,
     stockDocuments,
@@ -131,14 +134,14 @@ export default function AdminDashboard() {
   // Tab đang được chọn
   const [activeTab, setActiveTab] = useState(availableTabs[0]?.id || 'cskh_orders');
 
+  const validTabIds = useMemo(() => availableTabs.map((t) => t.id).join(','), [availableTabs]);
+
   // Đảm bảo tab hợp lệ khi đổi vai trò
   React.useEffect(() => {
-    if (!availableTabs.some((t) => t.id === activeTab)) {
-      if (availableTabs.length > 0) {
-        setActiveTab(availableTabs[0].id);
-      }
+    if (availableTabs.length > 0 && !availableTabs.some((t) => t.id === activeTab)) {
+      setActiveTab(availableTabs[0].id);
     }
-  }, [availableTabs, activeTab]);
+  }, [validTabIds, activeTab]);
 
   // Modal hiển thị danh sách quyền chi tiết từ v_user_permissions
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
@@ -198,7 +201,7 @@ export default function AdminDashboard() {
       ),
     }));
     logAudit(user?.full_name || 'Phạm CSKH', 'CONFIRM_ORDER', order.code, 'CSKH xác nhận đơn hàng mới -> Chuyển sang xử lý');
-    toast.success(`Đã xác nhận đơn hàng ${order.code} (new -> processing)!`);
+    toast.success(`Đã xác nhận đơn hàng ${order.code} thành công!`);
   };
 
   // CSKH: Hủy đơn hàng có lý do
@@ -287,7 +290,7 @@ export default function AdminDashboard() {
     if (!order) return;
 
     if (order.status !== 'packing') {
-      toast.error(`QUY TẮC CSDL: Đơn hàng ${order.code} đang ở "${order.status}". Phải chuyển sang "PACKING" trước khi xuất kho!`);
+      toast.error(`Đơn hàng ${order.code} đang ở trạng thái "${order.status}". Cần chuyển sang "ĐÓNG GÓI" trước khi xuất kho!`);
       return;
     }
 
@@ -354,7 +357,7 @@ export default function AdminDashboard() {
       items: stocktakeForm.items,
       userName: user?.full_name || 'Lê Thủ Kho',
     });
-    toast.success(`Đã tạo đợt kiểm kê ${newStocktake.code}! Độ chênh lệch difference đã tự động tính.`);
+    toast.success(`Đã tạo đợt kiểm kê ${newStocktake.code} thành công!`);
   };
 
   // Quản lý kho: Cân bằng tồn kho từ phiếu kiểm kê
@@ -382,7 +385,7 @@ export default function AdminDashboard() {
   const handleSaveSettings = (e) => {
     e.preventDefault();
     updateSettings(settingsForm, user?.full_name || 'Super Admin');
-    toast.success('Đã cập nhật cấu hình hệ thống (system_settings)!');
+    toast.success('Đã cập nhật cấu hình hệ thống thành công!');
   };
 
   const handleCreateVoucherSubmit = (e) => {
@@ -423,7 +426,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-mono text-[10px] tracking-widest text-emerald-400 uppercase font-bold">
-              PORTAL INTERNAL RBAC // shop_db POSTGRESQL
+              PORTAL NỘI BỘ // HỆ THỐNG QUẢN TRỊ
             </span>
           </div>
           <h1 className="font-inter font-black text-2xl tracking-tight text-white uppercase flex items-center gap-2">
@@ -433,11 +436,11 @@ export default function AdminDashboard() {
             </span>
           </h1>
           <p className="font-mono text-xs text-zinc-400">
-            Hệ thống phân quyền thực tế dựa trên View <code className="text-zinc-200">v_user_permissions</code> của tài khoản đang đăng nhập.
+            Hệ thống phân quyền nội bộ dành cho nhân viên vận hành và quản lý Aether Labs.
           </p>
         </div>
 
-        {/* Cụm thông tin User & Nút xem chi tiết permissions */}
+        {/* Cụm thông tin User, phân quyền & Nút Đăng xuất nội bộ */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="text-right font-mono text-xs">
             <p className="text-zinc-500 uppercase text-[10px]">Tài khoản đang trực:</p>
@@ -460,6 +463,19 @@ export default function AdminDashboard() {
               </button>
             </div>
           </div>
+
+          <button
+            onClick={() => {
+              logout();
+              navigate('/staff/login');
+              toast.success('Đã đăng xuất khỏi Cổng Nội Bộ!');
+            }}
+            className="px-3 py-2 bg-zinc-900 border border-zinc-700 hover:border-rose-500 hover:bg-rose-950/40 hover:text-rose-300 text-zinc-300 font-mono text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+            title="Đăng xuất khỏi hệ thống quản trị"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">ĐĂNG XUẤT</span>
+          </button>
         </div>
       </div>
 

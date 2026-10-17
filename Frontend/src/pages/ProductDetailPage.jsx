@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Play,
   Share2,
+  Grid,
 } from 'lucide-react';
 import AetherNavbar from '../components/AetherNavbar';
 import AetherCartDrawer from '../components/AetherCartDrawer';
@@ -33,63 +34,60 @@ import {
 } from '../data/mockData';
 import toast from 'react-hot-toast';
 
-// Chương trình khuyến mãi đang chạy (now() BETWEEN start_at AND end_at)
+// Chương trình khuyến mãi đang chạy
 const ACTIVE_PROMOTIONS = [
-  { id: 1, name: 'MÙA ĐÔNG FW/26', discount_percent: 10, product_ids: [1, 3] },
+  { id: 1, name: 'MÙA ĐÔNG FW/26', discount_percent: 10, product_ids: [1, 2] },
 ];
 
-// Dữ liệu đánh giá mẫu đã được CSKH phê duyệt (status = 'approved') theo trigger check_review
+// Dữ liệu đánh giá từ khách hàng đã mua
 const MOCK_APPROVED_REVIEWS = [
   {
     id: 1,
     product_id: 1,
-    customer_name: 'Hoàng Minh Quân',
+    customer_name: 'Nguyễn Bích Ngọc',
     rating: 5,
-    variant_label: 'Size M / Đen / Cotton (SKU: AT01-DEN-M)',
-    created_at: '2026-10-12T14:20:00Z',
-    content: 'Chất vải 100% Cotton chải kỹ cực kỳ dày dặn và mát mẻ. Giặt máy không bị xù lông hay biến dạng cổ áo. Phom áo rủ rất đẹp.',
+    variant_label: 'Size M / Trắng / Vải Rayon (SKU: AKN-479073-00-M)',
+    created_at: '2026-10-14T11:30:00Z',
+    content: 'Áo mặc đi làm văn phòng siêu thanh lịch. Vải rayon mềm mại, thoáng mát và phom áo rủ rất sang trọng.',
     is_verified: true,
     media: [
-      { type: 'image', url: '/images/products/nam_demo/san_pham1/vngoods_69_486116_3x4.avif' },
+      { type: 'image', url: '/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif' },
     ],
   },
   {
     id: 2,
-    product_id: 2,
-    customer_name: 'Trần Văn Nam',
+    product_id: 1,
+    customer_name: 'Trần Thị Thu Thảo',
     rating: 5,
-    variant_label: 'Size 30 / Xanh / Denim (SKU: QJ01-XANH-30)',
-    created_at: '2026-10-10T09:15:00Z',
-    content: 'Vải denim 12.5oz chuẩn mực, màu xanh wash tự nhiên. Đường chỉ gia cố chịu lực rất chắc chắn.',
+    variant_label: 'Size L / Beige / Vải Rayon (SKU: AKN-479073-10-L)',
+    created_at: '2026-10-15T09:15:00Z',
+    content: 'Màu Beige ở ngoài tôn da cực kỳ, mặc nhẹ tênh như không. Rất ưng ý chất liệu này.',
     is_verified: true,
     media: [],
   },
   {
     id: 3,
-    product_id: 3,
-    customer_name: 'Nguyễn Bích Ngọc',
-    rating: 5,
-    variant_label: 'Size M / Trắng / Rayon (SKU: AKN-479073-00-M)',
-    created_at: '2026-10-14T11:30:00Z',
-    content: 'Áo mặc đi làm văn phòng siêu thanh lịch. Vải rayon mềm mại và thân thiện môi trường vì có sợi tái chế.',
-    is_verified: true,
-    media: [
-      { type: 'image', url: '/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif' },
-      { type: 'image', url: '/images/products/nu_demo/san_pham1/goods_479073_sub14_3x4.avif' },
-    ],
-  },
-  {
-    id: 4,
-    product_id: 4,
+    product_id: 2,
     customer_name: 'Đặng Tuấn Kiệt',
     rating: 5,
-    variant_label: 'Size L / Navy / Lông cừu (SKU: AKM-486116-69-L)',
+    variant_label: 'Size L / Navy / Lông Cừu Cản Gió (SKU: AKM-486116-69-L)',
     created_at: '2026-10-15T16:00:00Z',
     content: 'Khả năng cản gió của áo này là số một. Đi xe máy mùa đông Hà Nội gió rít mà người vẫn ấm sực.',
     is_verified: true,
     media: [
       { type: 'image', url: '/images/products/nam_demo/san_pham1/vngoods_486116_sub3_3x4.avif' },
     ],
+  },
+  {
+    id: 4,
+    product_id: 2,
+    customer_name: 'Lê Hoàng Long',
+    rating: 5,
+    variant_label: 'Size XL / Đen / Lông Cừu Cản Gió (SKU: AKM-486116-09-XL)',
+    created_at: '2026-10-16T10:20:00Z',
+    content: 'Áo phom thể thao gọn gàng, lớp lót trong mềm mại và giữ nhiệt rất tốt. Đáng tiền!',
+    is_verified: true,
+    media: [],
   },
 ];
 
@@ -98,7 +96,8 @@ export default function ProductDetailPage() {
   const navigate = useNavigate();
 
   // Cart store
-  const cartItemsStore = useCartStore((state) => state.items);
+  const rawCartItemsStore = useCartStore((state) => state.items);
+  const cartItemsStore = Array.isArray(rawCartItemsStore) ? rawCartItemsStore : [];
   const addToCartStore = useCartStore((state) => state.addToCart);
   const updateQuantityStore = useCartStore((state) => state.updateQuantity);
   const removeFromCartStore = useCartStore((state) => state.removeFromCart);
@@ -183,6 +182,7 @@ export default function ProductDetailPage() {
 
   const [quantity, setQuantity] = useState(1);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [mediaTab, setMediaTab] = useState('grid'); // 'grid' | 'single' | 'video'
 
   // Tra cứu product_variants tương ứng với Tổ hợp (Color, Size, Material)
   const currentVariant = useMemo(() => {
@@ -201,6 +201,10 @@ export default function ProductDetailPage() {
         const cId = v.color_id || v.color?.id;
         const sName = v.size?.name || v.size;
         return cId === selectedColorId && sName === selectedSizeName;
+      }) ||
+      product.variants.find((v) => {
+        const cId = v.color_id || v.color?.id;
+        return cId === selectedColorId;
       }) ||
       product.variants[0]
     );
@@ -228,18 +232,23 @@ export default function ProductDetailPage() {
     ? Math.round(truePrice * (1 - activePromo.discount_percent / 100))
     : truePrice;
 
-  // Ảnh hiển thị ưu tiên theo variant_id của màu đang chọn
+  // Ảnh hiển thị ưu tiên theo color_id hoặc variant_id của màu đang chọn
   const displayImages = useMemo(() => {
     const list = [...product.images];
+    // 1. Ưu tiên ảnh khớp color_id
+    const colorMatchedImg = product.images.find((img) => img.color_id === selectedColorId);
+    if (colorMatchedImg) {
+      return [colorMatchedImg, ...list.filter((img) => img.id !== colorMatchedImg.id)];
+    }
+    // 2. Ưu tiên ảnh khớp variant_id
     if (currentVariant?.id) {
       const variantImg = product.images.find((img) => img.variant_id === currentVariant.id);
       if (variantImg) {
-        // Đưa ảnh của biến thể này lên đầu danh sách hiển thị
         return [variantImg, ...list.filter((img) => img.id !== variantImg.id)];
       }
     }
     return list;
-  }, [product, currentVariant]);
+  }, [product, currentVariant, selectedColorId]);
 
   const currentMediaUrl = displayImages[activeMediaIndex]?.url || displayImages[0]?.url || '/placeholder.jpg';
 
@@ -340,65 +349,189 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 border border-zinc-800 bg-[#080808]">
           
           {/* ===================================================================
-              CỘT TRÁI (7 COLS): HÌNH ẢNH SẢN PHẨM & NỀN DOT MATRIX
+              CỘT TRÁI (7 COLS): BỐ CỤC 4 ẢNH NHƯ ẢNH CHỤP HOẶC VIDEO MÔ TẢ
           ==================================================================== */}
-          <div className="lg:col-span-7 border-b lg:border-b-0 lg:border-r border-zinc-800 flex flex-col justify-between">
+          <div className="lg:col-span-7 border-b lg:border-b-0 lg:border-r border-zinc-800 flex flex-col justify-between bg-zinc-950/40">
             
-            {/* Ảnh chính lớn trên nền dot matrix */}
-            <div className="relative w-full aspect-[4/3] sm:aspect-[1/1] bg-zinc-950 bg-dot-matrix p-8 sm:p-12 flex items-center justify-center overflow-hidden">
-              
-              {/* Badge SKU góc trên bên trái */}
-              <div className="absolute top-4 left-4 z-10 px-2.5 py-1 border border-zinc-800 bg-black/85 font-mono text-[10px] tracking-widest text-zinc-300">
-                SKU: <strong className="text-white">{currentVariant.sku}</strong>
+            {/* Header Tabs Media */}
+            <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 bg-zinc-950/90 font-mono text-[10px] tracking-widest text-zinc-400">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setMediaTab('grid')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 uppercase tracking-wider transition-all cursor-pointer ${
+                    mediaTab === 'grid'
+                      ? 'bg-white text-black font-bold shadow-xs'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                  }`}
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                  <span>BỐ CỤC 4 ẢNH</span>
+                </button>
+
+                <button
+                  onClick={() => setMediaTab('single')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 uppercase tracking-wider transition-all cursor-pointer ${
+                    mediaTab === 'single'
+                      ? 'bg-white text-black font-bold shadow-xs'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                  }`}
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>PHÓNG TO</span>
+                </button>
+
+                <button
+                  onClick={() => setMediaTab('video')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 uppercase tracking-wider transition-all cursor-pointer ${
+                    mediaTab === 'video'
+                      ? 'bg-amber-400 text-black font-bold shadow-xs'
+                      : 'text-amber-400 hover:text-amber-300 hover:bg-zinc-900'
+                  }`}
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>VIDEO MÔ TẢ</span>
+                </button>
               </div>
 
-              {/* Badge Khuyến mãi nếu có */}
-              {activePromo && (
-                <div className="absolute top-4 right-4 z-10 px-2.5 py-1 border border-rose-500/80 bg-rose-950/40 font-mono text-[10px] tracking-widest text-rose-300 uppercase shadow-md">
-                  SALE -{activePromo.discount_percent}% // {activePromo.name}
-                </div>
-              )}
-
-              {/* Ảnh sản phẩm với drop-shadow kỹ thuật cao */}
-              <img
-                src={currentMediaUrl}
-                alt={product.name}
-                className="max-h-full max-w-full object-contain filter drop-shadow-[0_25px_40px_rgba(0,0,0,0.9)] transition-all duration-500"
-              />
-
-              {/* Tình trạng tồn kho khả dụng v_inventory_available */}
-              <div className="absolute bottom-4 left-4 z-10 px-2.5 py-1 border border-zinc-800 bg-black/85 font-mono text-[10px] tracking-widest flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 ${isOutOfStock ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
-                <span className={isOutOfStock ? 'text-rose-400' : 'text-emerald-400'}>
-                  {isOutOfStock
-                    ? 'HẾT HÀNG TRONG KHO'
-                    : `AVAILABLE: ${quantityAvailable} UNITS`}
-                </span>
+              <div className="hidden sm:flex items-center gap-2 text-zinc-500 font-mono text-[10px]">
+                <span>SKU: {currentVariant?.sku || '---'}</span>
               </div>
             </div>
 
-            {/* Dải ảnh Thumbnail (1px grid border) */}
-            <div className="border-t border-zinc-800 p-4 bg-zinc-950/60 flex items-center gap-3 overflow-x-auto">
-              {displayImages.map((img, idx) => (
-                <button
-                  key={img.id || idx}
-                  onClick={() => setActiveMediaIndex(idx)}
-                  className={`relative w-16 h-16 sm:w-20 sm:h-20 border shrink-0 bg-black p-1 transition-all cursor-pointer ${
-                    activeMediaIndex === idx
-                      ? 'border-white ring-1 ring-white/50'
-                      : 'border-zinc-800 opacity-60 hover:opacity-100 hover:border-zinc-600'
-                  }`}
-                >
-                  <img
-                    src={img.url}
-                    alt={`Thumbnail ${idx + 1}`}
-                    className="w-full h-full object-contain"
-                  />
-                  {img.variant_id && (
-                    <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 bg-amber-400" />
+            {/* Vùng Media hiển thị */}
+            <div className="relative flex-1 min-h-[460px] lg:min-h-[580px] bg-[#080808] p-3 sm:p-4 flex items-center justify-center overflow-hidden">
+              
+              {/* 1. BỐ CỤC 4 ẢNH (2x2 GRID GIỐNG HỆT ẢNH CHỤP CỦA KHÁCH) */}
+              {mediaTab === 'grid' && (
+                <div className="grid grid-cols-2 gap-2 w-full h-full max-w-3xl mx-auto">
+                  {displayImages.slice(0, 4).map((img, idx) => {
+                    const isSelectedColor =
+                      img.color_id && img.color_id === selectedColorId;
+
+                    return (
+                      <div
+                        key={img.id || idx}
+                        onClick={() => {
+                          setActiveMediaIndex(idx);
+                          setMediaTab('single');
+                        }}
+                        className={`relative aspect-[3/4] overflow-hidden bg-zinc-900 border transition-all cursor-pointer group ${
+                          isSelectedColor
+                            ? 'border-white ring-1 ring-white/60 shadow-lg'
+                            : 'border-zinc-800 hover:border-zinc-500'
+                        }`}
+                      >
+                        <img
+                          src={img.url}
+                          alt={`${product.name} - ${idx + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+
+                        {/* Icon móc treo quần áo góc dưới bên trái (như ảnh chụp) */}
+                        {idx < 2 && (
+                          <div className="absolute bottom-2.5 left-2.5 w-6 h-6 rounded-full bg-black/80 border border-white/20 flex items-center justify-center text-xs text-white shadow-md">
+                            <span>👔</span>
+                          </div>
+                        )}
+
+                        {/* Tag thông số chiều cao người mẫu góc dưới bên phải */}
+                        <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 bg-black/80 backdrop-blur-xs font-mono text-[9px] text-zinc-200 tracking-wide border border-white/10">
+                          {img.label || (idx < 2 ? (product.id === 1 ? 'Người mẫu: 168cm / Size quần áo: S' : 'Người mẫu: 176cm / Size quần áo: L') : 'Chi tiết sản phẩm')}
+                        </div>
+
+                        {/* Chỉ báo màu đang chọn */}
+                        {isSelectedColor && (
+                          <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white text-black font-mono text-[9px] font-bold tracking-widest shadow-xs">
+                            MÀU ĐANG CHỌN
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 2. TAB PHÓNG TO ẢNH ĐƠN */}
+              {mediaTab === 'single' && (
+                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                  
+                  {/* Badge Khuyến mãi nếu có */}
+                  {activePromo && (
+                    <div className="absolute top-4 right-4 z-10 px-2.5 py-1 border border-rose-500/80 bg-rose-950/40 product-sale-badge font-mono text-[10px] tracking-widest text-rose-300 uppercase shadow-md flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-rose-400 rounded-full animate-pulse" />
+                      <span>SALE -{activePromo.discount_percent}% // {activePromo.name}</span>
+                    </div>
                   )}
-                </button>
-              ))}
+
+                  <div className="relative w-full aspect-[4/3] sm:aspect-[1/1] max-h-[500px] flex items-center justify-center bg-zinc-950 bg-dot-matrix p-8 overflow-hidden border border-zinc-800">
+                    <img
+                      src={currentMediaUrl}
+                      alt={product.name}
+                      className="max-h-full max-w-full object-contain filter drop-shadow-[0_25px_40px_rgba(0,0,0,0.9)] transition-all duration-500"
+                    />
+
+                    {/* Tình trạng tồn kho khả dụng v_inventory_available */}
+                    <div className="absolute bottom-4 left-4 z-10 px-2.5 py-1 border border-zinc-800 bg-black/85 product-stock-badge font-mono text-[10px] tracking-widest flex items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full ${isOutOfStock ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
+                      <span className={isOutOfStock ? 'text-rose-400' : 'text-emerald-400'}>
+                        {isOutOfStock ? 'HẾT HÀNG TRONG KHO' : `CÒN LẠI: ${quantityAvailable} SẢN PHẨM`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Dải ảnh Thumbnail (1px grid border) */}
+                  <div className="w-full border-t border-zinc-800 p-3 bg-zinc-950/60 flex items-center gap-3 overflow-x-auto mt-2">
+                    {displayImages.map((img, idx) => (
+                      <button
+                        key={img.id || idx}
+                        onClick={() => setActiveMediaIndex(idx)}
+                        className={`relative w-16 h-16 border shrink-0 bg-black p-1 transition-all cursor-pointer ${
+                          activeMediaIndex === idx
+                            ? 'border-white ring-1 ring-white/50'
+                            : 'border-zinc-800 opacity-60 hover:opacity-100 hover:border-zinc-600'
+                        }`}
+                      >
+                        <img
+                          src={img.url}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="w-full h-full object-contain"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. TAB VIDEO MÔ TẢ SẢN PHẨM */}
+              {mediaTab === 'video' && (
+                <div className="relative w-full h-full flex flex-col items-center justify-center p-4 bg-black">
+                  <div className="relative w-full aspect-video max-h-[480px] border border-zinc-800 overflow-hidden shadow-2xl bg-black flex items-center justify-center">
+                    <video
+                      src={product.video_url || (product.id === 1 ? '/images/products/nu_demo/san_pham1/video_intro.mp4' : '/images/products/nam_demo/san_pham1/video_intro_nam.mp4')}
+                      controls
+                      autoPlay
+                      loop
+                      playsInline
+                      className="w-full h-full object-contain"
+                    />
+
+                    <div className="absolute top-4 left-4 px-2.5 py-1 bg-black/85 border border-zinc-700 font-mono text-[9px] text-amber-400 tracking-widest flex items-center gap-1.5 pointer-events-none">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      <span>REC // FULL HD 1080P // AETHER CINEMATIC</span>
+                    </div>
+                  </div>
+                  <p className="font-mono text-xs text-zinc-400 mt-3 text-center">
+                    Video quay cận cảnh phom dáng thực tế và chi tiết chất liệu khi chuyển động
+                  </p>
+                </div>
+              )}
+
+            </div>
+
+            {/* Dải thông tin dưới cột trái */}
+            <div className="border-t border-zinc-800 px-4 py-2.5 bg-zinc-950/80 flex items-center justify-between font-mono text-[10px] text-zinc-400">
+              <span>● GIAO HỎA TỐC 2H TRONG NỘI THÀNH</span>
+              <span>MIỄN PHÍ ĐỔI TRẢ TRONG 7 NGÀY</span>
             </div>
 
           </div>
@@ -436,7 +569,7 @@ export default function ProductDetailPage() {
               {/* Giá Bán Thật: product_variants.price & Khuyến mãi */}
               <div className="border border-zinc-800 bg-zinc-950/80 p-4 font-mono space-y-1">
                 <span className="text-[10px] text-zinc-500 uppercase tracking-widest block">
-                  GIÁ BÁN NIÊM YẾT // SELLING PRICE
+                  GIÁ BÁN CHÍNH THỨC
                 </span>
 
                 <div className="flex items-baseline gap-3">
@@ -452,8 +585,8 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="text-[10px] text-zinc-400 pt-1 flex items-center justify-between">
-                  <span>* Giá bán thật lấy từ product_variants.price</span>
-                  <span className="text-emerald-400">MIỄN PHÍ VẬN CHUYỂN TỪ 500K</span>
+                  <span>* Cam kết chính hãng 100% từ Aether Labs</span>
+                  <span className="text-emerald-400">MIỄN PHÍ VẬN CHUYỂN TỪ 500.000₫</span>
                 </div>
               </div>
 
@@ -462,11 +595,11 @@ export default function ProductDetailPage() {
               ================================================================== */}
               <div className="space-y-4 border-t border-zinc-800 pt-5">
                 
-                {/* 1. MÀU SẮC (colors): Hiển thị ô màu và tên màu */}
+                {/* 1. MÀU SẮC: Hiển thị ô màu và tên màu */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between font-mono text-[11px]">
                     <span className="text-zinc-400 uppercase tracking-widest">
-                      1. MÀU SẮC (colors):
+                      1. MÀU SẮC:
                     </span>
                     <span className="text-white font-bold">
                       {availableColors.find((c) => c.id === selectedColorId)?.name}
@@ -479,16 +612,19 @@ export default function ProductDetailPage() {
                       return (
                         <button
                           key={col.id}
-                          onClick={() => setSelectedColorId(col.id)}
-                          className={`flex items-center gap-2 px-3 py-1.5 border font-mono text-[11px] tracking-wider transition-all cursor-pointer ${
+                          onClick={() => {
+                            setSelectedColorId(col.id);
+                            setActiveMediaIndex(0);
+                          }}
+                          className={`flex items-center gap-2 px-3 py-1.5 border font-mono text-[11px] font-bold tracking-wider transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-white bg-zinc-900 text-white shadow-md'
-                              : 'border-zinc-800 bg-black text-zinc-400 hover:border-zinc-600 hover:text-white'
+                              ? 'border-white bg-white text-black dark:border-white dark:bg-white dark:text-black shadow-md'
+                              : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-zinc-500 hover:text-white'
                           }`}
                         >
                           <span
                             style={{ backgroundColor: col.hex_code }}
-                            className="w-3.5 h-3.5 border border-zinc-600 shrink-0"
+                            className="w-3.5 h-3.5 border border-zinc-400 inline-block shrink-0 shadow-2xs"
                           />
                           <span>{col.name}</span>
                         </button>
@@ -497,11 +633,11 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
 
-                {/* 2. KÍCH CỠ (sizes): Ô vuông kích cỡ */}
+                {/* 2. KÍCH CỠ: Ô vuông kích cỡ */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between font-mono text-[11px]">
                     <span className="text-zinc-400 uppercase tracking-widest">
-                      2. KÍCH CỠ (sizes):
+                      2. KÍCH CỠ:
                     </span>
                     <span className="text-white font-bold">{selectedSizeName}</span>
                   </div>
@@ -526,11 +662,11 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
 
-                {/* 3. CHẤT LIỆU (materials): Ô chất liệu */}
+                {/* 3. CHẤT LIỆU: Ô chất liệu */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between font-mono text-[11px]">
                     <span className="text-zinc-400 uppercase tracking-widest">
-                      3. CHẤT LIỆU (materials):
+                      3. CHẤT LIỆU:
                     </span>
                     <span className="text-white font-bold">{selectedMaterialName}</span>
                   </div>
@@ -557,23 +693,19 @@ export default function ProductDetailPage() {
 
               </div>
 
-              {/* Hiển thị SKU & Chi tiết Tồn kho View v_inventory_available */}
+              {/* Hiển thị SKU & Chi tiết Tình trạng tồn kho */}
               <div className="p-3 border border-zinc-800 bg-zinc-950 font-mono text-[10px] space-y-1">
                 <div className="flex justify-between text-zinc-400">
-                  <span>MÃ BIẾN THỂ (SKU):</span>
+                  <span>MÃ SẢN PHẨM (SKU):</span>
                   <span className="text-white font-bold">{currentVariant.sku}</span>
                 </div>
                 <div className="flex justify-between text-zinc-400">
-                  <span>TỒN THỰC TẾ (quantity_on_hand):</span>
-                  <span className="text-zinc-300">{inventoryInfo?.quantity_on_hand ?? 0}</span>
-                </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>ĐÃ GIỮ CHỖ (quantity_reserved):</span>
-                  <span className="text-zinc-300">{inventoryInfo?.quantity_reserved ?? 0}</span>
+                  <span>TÌNH TRẠNG:</span>
+                  <span className="text-zinc-300">{isOutOfStock ? 'TẠM HẾT HÀNG' : 'CÒN HÀNG TRONG KHO'}</span>
                 </div>
                 <div className="flex justify-between text-emerald-400 font-bold border-t border-zinc-900 pt-1">
-                  <span>KHẢ DỤNG (quantity_available):</span>
-                  <span>{quantityAvailable} CHIẾC</span>
+                  <span>SẴN SÀNG GIAO:</span>
+                  <span>{quantityAvailable} SẢN PHẨM</span>
                 </div>
               </div>
 
@@ -610,7 +742,7 @@ export default function ProductDetailPage() {
               
               {isOutOfStock ? (
                 <div className="w-full py-4 border border-rose-500/50 bg-rose-950/20 text-rose-400 font-mono text-center text-xs font-bold tracking-widest uppercase">
-                  [ OUT OF STOCK // HẾT HÀNG TRONG KHO ]
+                  [ HẾT HÀNG TRONG KHO ]
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -621,7 +753,7 @@ export default function ProductDetailPage() {
                     className="w-full py-4 border border-zinc-700 bg-black hover:border-white hover:bg-zinc-900 text-white font-mono text-xs font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:translate-y-0.5"
                   >
                     <ShoppingBag className="w-4 h-4" />
-                    <span>ADD TO CART</span>
+                    <span>THÊM VÀO GIỎ HÀNG</span>
                   </button>
 
                   {/* Nút 2: BUY NOW (chuyển thẳng sang Checkout với orders.is_buy_now = true) */}
@@ -630,7 +762,7 @@ export default function ProductDetailPage() {
                     className="w-full py-4 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-xs font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl active:translate-y-0.5"
                   >
                     <Zap className="w-4 h-4 fill-black" />
-                    <span>BUY NOW</span>
+                    <span>MUA NGAY</span>
                   </button>
 
                 </div>
@@ -666,7 +798,7 @@ export default function ProductDetailPage() {
           <div className="p-6 sm:p-8 border-b border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase block">
-                CUSTOMER REVIEWS (v_product_rating)
+                ĐÁNH GIÁ KHÁCH HÀNG // CUSTOMER REVIEWS
               </span>
               <h3 className="font-inter font-black text-2xl text-white tracking-tight mt-1">
                 Đánh giá từ khách hàng đã mua

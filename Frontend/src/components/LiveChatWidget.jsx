@@ -40,10 +40,14 @@ export default function LiveChatWidget() {
   const [isSubmittingGuest, setIsSubmittingGuest] = useState(false);
   const messagesEndRef = useRef(null);
 
+  const safeConversations = Array.isArray(conversations) ? conversations : [];
+  const safeMessages = Array.isArray(messages) ? messages : [];
+
   // Tìm cuộc trò chuyện hiện tại của khách
-  const currentConversation = conversations.find((c) => {
+  const currentConversation = safeConversations.find((c) => {
+    if (!c) return false;
     if (user?.id) {
-      return c.customer_id === user.id && c.status === 'open';
+      return String(c.customer_id) === String(user.id) && c.status === 'open';
     }
     if (activeConversationId) {
       return c.id === activeConversationId;
@@ -60,19 +64,21 @@ export default function LiveChatWidget() {
         guest_contact: user.phone || user.email || '',
       });
     }
-  }, [user, isWidgetOpen, currentConversation, initClientConversation]);
+  }, [user?.id, isWidgetOpen, currentConversation?.id]);
 
   // Cuộn xuống tin nhắn mới nhất
-  const currentMessages = messages.filter(
-    (m) => m.conversation_id === currentConversation?.id
+  const currentMessages = safeMessages.filter(
+    (m) => m && m.conversation_id === currentConversation?.id
   );
 
   useEffect(() => {
-    if (isWidgetOpen && currentConversation) {
-      markAsRead(currentConversation.id, 'customer');
+    if (isWidgetOpen && currentConversation?.id) {
+      if (currentConversation.unread_customer > 0) {
+        markAsRead(currentConversation.id, 'customer');
+      }
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [isWidgetOpen, currentMessages.length, currentConversation, markAsRead]);
+  }, [isWidgetOpen, currentMessages.length, currentConversation?.id, currentConversation?.unread_customer]);
 
   // Số tin nhắn chưa đọc của khách
   const unreadCount = currentConversation?.unread_customer || 0;
@@ -151,33 +157,26 @@ export default function LiveChatWidget() {
 
   return (
     <>
-      {/* Nút bấm Floating ở góc dưới bên phải */}
+      {/* Nút bấm Floating CSKH tối giản: Chỉ còn icon tai nghe theo yêu cầu */}
       <div className="fixed bottom-6 right-6 z-40">
         <motion.button
           onClick={toggleWidget}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          className="relative flex items-center gap-3 px-4 py-3 bg-[#080808] text-[#fafafa] border border-zinc-700 hover:border-zinc-400 shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-md group transition-all"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+          className="relative w-12 h-12 bg-[#080808] hover:bg-zinc-900 text-[#fafafa] border border-zinc-700 hover:border-zinc-300 shadow-[0_8px_30px_rgba(0,0,0,0.8)] flex items-center justify-center transition-all cursor-pointer group"
+          title="Hỗ trợ trực tuyến 24/7"
         >
           {/* Pulsing Emerald Dot */}
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          <span className="absolute top-2 right-2 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
           </span>
 
-          <div className="flex flex-col text-left">
-            <span className="font-mono text-[10px] tracking-widest text-zinc-400 uppercase -mb-0.5">
-              CSKH TRỰC TUYẾN
-            </span>
-            <span className="font-mono text-xs font-bold tracking-tight text-white flex items-center gap-1.5">
-              <Headphones className="w-3.5 h-3.5 text-emerald-400" />
-              LIVE SUPPORT 24/7
-            </span>
-          </div>
+          <Headphones className="w-5 h-5 text-zinc-200 group-hover:text-emerald-400 transition-colors" />
 
           {/* Badge số tin nhắn chưa đọc */}
           {unreadCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-mono font-bold text-black border-2 border-[#080808] animate-bounce">
+            <span className="absolute -top-1.5 -left-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-mono font-bold text-black border border-[#080808]">
               {unreadCount}
             </span>
           )}
@@ -192,7 +191,7 @@ export default function LiveChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-24 right-6 z-50 w-[92vw] sm:w-[410px] h-[560px] bg-[#0c0c0c] border border-zinc-800 text-[#fafafa] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden font-sans"
+            className="fixed bottom-22 right-6 z-50 w-[92vw] sm:w-[390px] h-[540px] bg-[#0c0c0c] border border-zinc-800 text-[#fafafa] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden font-sans"
           >
             {/* Header Terminal Style */}
             <div className="p-3.5 bg-[#121212] border-b border-zinc-800 flex items-center justify-between">
@@ -204,7 +203,7 @@ export default function LiveChatWidget() {
                       AETHER // LIVE CHAT
                     </span>
                     <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 bg-emerald-950 text-emerald-400 border border-emerald-800">
-                      CS_STAFF ACTIVE
+                      ONLINE
                     </span>
                   </div>
                   <p className="font-mono text-[10px] text-zinc-400 tracking-tight">
@@ -212,7 +211,7 @@ export default function LiveChatWidget() {
                       ? `THÀNH VIÊN: ${user.full_name || user.phone}`
                       : currentConversation
                       ? `KHÁCH: ${currentConversation.guest_name}`
-                      : 'HỆ THỐNG HỖ TRỢ TRỰC TUYẾN'}
+                      : 'HỆ THỐNG HỖ TRỢ TRỰC TUYẾN 24/7'}
                   </p>
                 </div>
               </div>
@@ -228,17 +227,16 @@ export default function LiveChatWidget() {
 
             {/* Nội dung Chat: Form Khách Vãng Lai hoặc Lịch Sử Tin Nhắn */}
             {!user && !currentConversation ? (
-              // Màn hình Onboarding cho Khách Vãng Lai (Thỏa mãn CHECK DB: customer_id NOT NULL OR guest_contact NOT NULL)
               <div className="flex-1 p-6 flex flex-col justify-center space-y-5 bg-gradient-to-b from-[#0c0c0c] to-[#121212]">
                 <div className="space-y-2 text-center">
                   <div className="w-12 h-12 mx-auto bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400">
                     <Headphones className="w-6 h-6" />
                   </div>
                   <h3 className="font-inter font-bold text-base text-white tracking-tight uppercase">
-                    KẾT NỐI HỖ TRỢ VÃNG LAI
+                    HỖ TRỢ TRỰC TUYẾN
                   </h3>
                   <p className="font-mono text-[11px] text-zinc-400 leading-relaxed px-2">
-                    Theo quy tắc CSDL (bảng <code className="text-emerald-400">chat_conversations</code>), khách chưa đăng nhập vui lòng nhập Tên và SĐT/Email để mở phiên hội thoại.
+                    Vui lòng cung cấp Họ tên và Số điện thoại hoặc Email để chuyên viên CSKH hỗ trợ bạn ngay lập tức.
                   </p>
                 </div>
 

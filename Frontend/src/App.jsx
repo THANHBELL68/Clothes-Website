@@ -1,10 +1,13 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 import LiveChatWidget from './components/LiveChatWidget';
+import AetherCartDrawer from './components/AetherCartDrawer';
+import AetherSearchModal from './components/AetherSearchModal';
+import { useCartStore } from './store/cartStore';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -21,28 +24,48 @@ import CustomerAuthPage from './pages/CustomerAuthPage';
 import StaffAuthPage from './pages/StaffAuthPage';
 
 // Staff Dashboards
-import WarehouseDashboard from './pages/WarehouseDashboard';
-import CskhDashboard from './pages/CskhDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import { useAuthStore, normalizeRoleCode } from './store/authStore';
 
 function AppContent() {
   const location = useLocation();
-  const isAetherTheme =
-    ['/', '/checkout', '/orders'].includes(location.pathname) ||
-    location.pathname.startsWith('/products/') ||
-    location.pathname.startsWith('/admin');
+  const navigate = useNavigate();
+
+  const [cartOpen, setCartOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const rawCartItems = useCartStore((state) => state.items);
+  const cartItems = Array.isArray(rawCartItems) ? rawCartItems : [];
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeFromCart = useCartStore((state) => state.removeFromCart);
+
+  const authUser = useAuthStore((state) => state.user);
+  const normalizedRole = authUser ? normalizeRoleCode(authUser.role) : null;
+  const isStaff = normalizedRole && normalizedRole !== 'CUSTOMER';
+
+  const isHomePage = location.pathname === '/';
+  const isInternalPortal = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff');
+
+  // Quy tắc cách ly: Nhân viên nội bộ không truy cập vào giao diện người mua mà chỉ ở trong /admin
+  React.useEffect(() => {
+    if (isStaff && !isInternalPortal) {
+      navigate('/admin', { replace: true });
+    }
+  }, [isStaff, isInternalPortal, navigate]);
 
   return (
-    <div
-      className={`min-h-screen flex flex-col font-sans overflow-x-hidden selection:bg-[#fafafa] selection:text-[#080808] ${
-        isAetherTheme ? 'bg-[#080808] text-[#fafafa]' : 'bg-white text-neutral-900'
-      }`}
-    >
-      {/* Navigation Bar (Chỉ hiển thị cho các trang con theme sáng, trang Aether tự quản lý Navbar) */}
-      {!isAetherTheme && <Navbar />}
+    <div className="min-h-screen bg-[#080808] text-[#fafafa] flex flex-col font-sans overflow-x-hidden selection:bg-[#fafafa] selection:text-[#080808]">
+      
+      {/* Top Navbar Aether Labs: Chỉ hiển thị cho khách hàng trên các trang con */}
+      {!isHomePage && !isInternalPortal && (
+        <Navbar
+          onOpenCart={() => setCartOpen(true)}
+          onOpenSearch={() => setSearchOpen(true)}
+        />
+      )}
 
       {/* Main Content Area */}
-      <main className={`flex-1 w-full ${isAetherTheme ? '' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
+      <main className={`flex-1 w-full ${!isHomePage && !isInternalPortal ? 'pt-14' : ''}`}>
         <Routes>
           {/* Public Storefront Routes */}
           <Route path="/" element={<HomePage />} />
@@ -73,12 +96,12 @@ function AppContent() {
             }
           />
 
-          {/* Protected Staff Dashboards (Liên kết CSDL động) */}
+          {/* Protected Staff Dashboards: Hợp nhất về Command Center /admin có phân quyền v_user_permissions */}
           <Route
             path="/warehouse"
             element={
               <ProtectedRoute allowedRoles={['warehouse', 'admin', 'WAREHOUSE_MANAGER', 'SUPER_ADMIN']}>
-                <WarehouseDashboard />
+                <Navigate to="/admin" replace />
               </ProtectedRoute>
             }
           />
@@ -86,7 +109,7 @@ function AppContent() {
             path="/cskh"
             element={
               <ProtectedRoute allowedRoles={['cskh', 'admin', 'CS_STAFF', 'SUPER_ADMIN']}>
-                <CskhDashboard />
+                <Navigate to="/admin" replace />
               </ProtectedRoute>
             }
           />
@@ -104,11 +127,30 @@ function AppContent() {
         </Routes>
       </main>
 
-      {/* Footer (Chỉ hiển thị cho các trang con theme sáng) */}
-      {!isAetherTheme && <Footer />}
+      {/* Footer Aether Labs: Chỉ hiển thị trên các trang phụ của khách hàng */}
+      {!isHomePage && !isInternalPortal && <Footer />}
 
-      {/* Floating Live Chat Widget (kết nối chat_conversations & chat_messages, yêu cầu guest_name & guest_contact với khách chưa đăng nhập) */}
-      <LiveChatWidget />
+      {/* Global Slide-Out Cart Drawer */}
+      <AetherCartDrawer
+        isOpen={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={cartItems}
+        onUpdateQuantity={updateQuantity}
+        onRemoveItem={removeFromCart}
+      />
+
+      {/* Global Search Modal */}
+      <AetherSearchModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSelectGarment={(garment) => {
+          setSearchOpen(false);
+          navigate(`/products/${garment.id}`);
+        }}
+      />
+
+      {/* Floating Live Chat Widget (Chỉ hiển thị cho khách hàng ở storefront) */}
+      {!isInternalPortal && <LiveChatWidget />}
 
       {/* Toast Notification Container */}
       <Toaster
@@ -116,13 +158,14 @@ function AppContent() {
         toastOptions={{
           duration: 3500,
           style: {
-            background: '#18181b',
-            color: '#ffffff',
-            fontSize: '13px',
-            borderRadius: '2px',
+            background: '#121212',
+            color: '#fafafa',
+            fontSize: '12px',
+            borderRadius: '0px',
             border: '1px solid #27272a',
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.25)',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.8)',
             padding: '12px 18px',
+            fontFamily: 'JetBrains Mono',
           },
         }}
       />

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, ArrowRight, Tag, Award, ShoppingBag, ShieldAlert } from 'lucide-react';
+import { Trash2, ArrowRight, Tag, Award, ShoppingBag, ShieldCheck, Sparkles } from 'lucide-react';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
@@ -9,7 +9,7 @@ export default function CartPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const {
-    items,
+    items: rawItems,
     updateQuantity,
     removeFromCart,
     coupon,
@@ -23,6 +23,8 @@ export default function CartPage() {
     getPointsDiscount,
     getTotal,
   } = useCartStore();
+
+  const items = Array.isArray(rawItems) ? rawItems : [];
 
   const [couponCode, setCouponCode] = useState('');
   const [pointsInput, setPointsInput] = useState(pointsUsed || 0);
@@ -38,7 +40,15 @@ export default function CartPage() {
     if (!couponCode.trim()) return;
     const res = applyCoupon(couponCode);
     if (res.success) {
-      toast.success(res.message);
+      toast.success(res.message, {
+        style: {
+          background: '#080808',
+          color: '#fafafa',
+          border: '1px solid #27272a',
+          fontFamily: 'JetBrains Mono',
+          fontSize: '11px',
+        },
+      });
       setCouponCode('');
     } else {
       toast.error(res.message);
@@ -47,261 +57,294 @@ export default function CartPage() {
 
   const handleApplyPoints = (e) => {
     e.preventDefault();
-    if (!user) return;
-    const maxAllowed = Math.min(user.loyalty_points, Math.floor(subtotal / 1000));
+    if (!user) {
+      toast.error('Vui lòng đăng nhập để sử dụng điểm loyalty!');
+      return;
+    }
+    const maxAllowed = Math.min(user.loyalty_points || 0, Math.floor(subtotal / 1000));
     const val = Math.min(Math.max(0, Number(pointsInput)), maxAllowed);
     setPointsUsed(val);
     setPointsInput(val);
-    toast.success(`Đã áp dụng ${val} điểm loyalty (-${(val * 1000).toLocaleString('vi-VN')}₫)!`);
+    toast.success(`Đã áp dụng ${val} điểm loyalty (-${(val * 1000).toLocaleString('vi-VN')}₫)!`, {
+      style: {
+        background: '#080808',
+        color: '#fafafa',
+        border: '1px solid #27272a',
+        fontFamily: 'JetBrains Mono',
+        fontSize: '11px',
+      },
+    });
   };
 
-  const handleCheckoutClick = () => {
-    if (!user) {
-      toast.error('CSDL quy định: Khách hàng phải đăng nhập mới được đặt hàng (Không có Guest Checkout)!', {
-        duration: 4000,
-        icon: '🔒',
-      });
-      navigate('/login?redirect=/checkout');
-      return;
-    }
-    navigate('/checkout');
-  };
-
-  if (items.length === 0) {
-    return (
-      <div className="text-center py-24 max-w-md mx-auto space-y-4">
-        <div className="w-20 h-20 bg-neutral-100 rounded-sm flex items-center justify-center mx-auto text-neutral-400">
-          <ShoppingBag className="w-10 h-10" />
-        </div>
-        <h2 className="text-2xl font-black text-neutral-900 tracking-tight">Giỏ hàng của bạn đang trống</h2>
-        <p className="text-xs text-neutral-500">
-          Hãy khám phá các mẫu áo kiểu nữ Rayon và thời trang mới nhất của chúng tôi.
-        </p>
-        <Link
-          to="/products"
-          className="liquid-glass-btn-accent inline-flex items-center gap-2 px-6 py-3 text-white font-bold text-xs uppercase tracking-wider"
-        >
-          Mua sắm ngay <ArrowRight className="w-4 h-4" />
-        </Link>
-      </div>
-    );
-  }
+  const freeShippingThreshold = 500000;
+  const progressPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
 
   return (
-    <div className="space-y-8">
-      <div className="border-b border-neutral-200/80 pb-4">
-        <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Giỏ Hàng Mua Sắm</h1>
-        <p className="text-xs text-neutral-500 mt-1">Kiểm tra sản phẩm và áp dụng các khuyến mãi từ CSDL</p>
+    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
+      
+      {/* Header */}
+      <div className="border-b border-zinc-800 pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+              BAG // 01
+            </span>
+          </div>
+          <h1 className="font-inter font-black text-2xl sm:text-3xl text-white tracking-tight uppercase">
+            GIỎ HÀNG THỜI TRANG
+          </h1>
+        </div>
+
+        <span className="font-mono text-xs text-zinc-400">
+          TỔNG CỘNG: <strong className="text-white">{items.length} MÓN HÀNG</strong>
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        
-        {/* Left Column: List Cart Items */}
-        <div className="lg:col-span-8 space-y-4">
+      {items.length === 0 ? (
+        /* Empty Cart */
+        <div className="text-center py-24 max-w-lg mx-auto p-8 border border-zinc-800 bg-[#0c0c0c] space-y-4 font-mono">
+          <div className="w-16 h-16 border border-zinc-800 bg-zinc-900 flex items-center justify-center mx-auto text-zinc-500">
+            <ShoppingBag className="w-8 h-8 text-zinc-600" />
+          </div>
+          <h2 className="font-inter font-bold text-lg text-white tracking-tight uppercase">
+            GIỎ HÀNG ĐANG TRỐNG
+          </h2>
+          <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+            Bạn chưa chọn sản phẩm nào vào giỏ. Hãy khám phá bộ sưu tập Streetwear & Techwear của Aether Labs!
+          </p>
+          <div className="pt-2">
+            <Link
+              to="/products"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black hover:bg-zinc-200 font-mono text-xs font-bold uppercase tracking-widest transition-all"
+            >
+              <span>KHÁM PHÁ CATALOG</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      ) : (
+        /* Grid 2 Cột: Items List + Order Summary */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          <div className="bg-white/90 liquid-glass rounded-sm border border-neutral-200/80 overflow-hidden shadow-xs divide-y divide-neutral-100">
-            {items.map((item) => (
-              <div key={item.variant_id} className="p-4 sm:p-5 flex gap-4 sm:gap-6 items-center">
-                
-                {/* Product Thumbnail */}
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-20 h-26 sm:w-24 sm:h-32 object-cover object-top rounded-xs bg-neutral-100 shrink-0 border border-neutral-200"
+          {/* Cột Trái: Danh Sách Món Hàng (2 Cols) */}
+          <div className="lg:col-span-2 space-y-4">
+            
+            {/* Free Shipping Progress */}
+            <div className="p-4 bg-[#0c0c0c] border border-zinc-800 font-mono text-xs space-y-2">
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-zinc-400">
+                  {subtotal >= freeShippingThreshold ? (
+                    <strong className="text-emerald-400 font-bold">✓ BẠN ĐÃ ĐẠT ĐIỀU KIỆN MIỄN PHÍ VẬN CHUYỂN!</strong>
+                  ) : (
+                    <>Mua thêm <strong className="text-white font-bold">{(freeShippingThreshold - subtotal).toLocaleString('vi-VN')}₫</strong> để được FREESHIP</>
+                  )}
+                </span>
+                <span className="text-zinc-500">{progressPercent}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-zinc-900 border border-zinc-800 overflow-hidden">
+                <div
+                  className="h-full bg-white transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
                 />
+              </div>
+            </div>
 
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-neutral-900 text-sm sm:text-base truncate">
-                    {item.name}
-                  </h3>
-                  
-                  <div className="flex flex-wrap gap-2 text-xs text-neutral-500 mt-1">
-                    <span className="bg-neutral-100 px-2 py-0.5 rounded-xs font-semibold text-[11px]">Màu: {item.color}</span>
-                    <span className="bg-neutral-100 px-2 py-0.5 rounded-xs font-semibold text-[11px]">Size: {item.size}</span>
+            {/* Bảng Danh Sách Sản Phẩm */}
+            <div className="divide-y divide-zinc-800 border border-zinc-800 bg-[#0c0c0c]">
+              {items.map((item) => (
+                <div key={item.id} className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono text-xs">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-20 h-24 border border-zinc-800 bg-zinc-950 p-1 flex items-center justify-center shrink-0">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">
+                        SKU: {item.sku || `ITEM-0${item.product_id}`}
+                      </span>
+                      <Link
+                        to={`/products/${item.product_id}`}
+                        className="font-inter font-bold text-sm text-white hover:text-zinc-300 transition-colors block"
+                      >
+                        {item.name}
+                      </Link>
+                      <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+                        <span>Màu: <strong className="text-zinc-200">{item.color}</strong></span>
+                        <span>•</span>
+                        <span>Size: <strong className="text-zinc-200">{item.size}</strong></span>
+                      </div>
+                      <span className="font-bold text-white text-xs block">
+                        {item.price?.toLocaleString('vi-VN')}₫
+                      </span>
+                    </div>
                   </div>
 
-                  <p className="font-black text-neutral-900 text-base mt-2">
-                    {item.price.toLocaleString('vi-VN')}₫
-                  </p>
-
-                  {/* Quantity Stepper góc cạnh */}
-                  <div className="flex items-center gap-4 mt-3">
-                    <div className="flex items-center border border-neutral-300 rounded-sm overflow-hidden bg-white text-xs font-bold shadow-xs">
+                  {/* Cụm Số lượng & Tổng tiền */}
+                  <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-900">
+                    <div className="flex items-center border border-zinc-800 bg-black">
                       <button
-                        onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
-                        className="px-2.5 py-1.5 hover:bg-neutral-100 text-neutral-700"
+                        onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                        className="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
                       >
                         -
                       </button>
-                      <span className="px-3 py-1.5 min-w-6 text-center font-mono font-black">{item.quantity}</span>
+                      <span className="w-9 text-center font-bold text-white text-xs">
+                        {item.quantity}
+                      </span>
                       <button
-                        onClick={() => updateQuantity(item.variant_id, item.quantity + 1)}
-                        className="px-2.5 py-1.5 hover:bg-neutral-100 text-neutral-700"
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
                       >
                         +
                       </button>
                     </div>
 
+                    <div className="text-right min-w-[90px]">
+                      <span className="text-sm font-bold text-white block">
+                        {(item.price * item.quantity).toLocaleString('vi-VN')}₫
+                      </span>
+                    </div>
+
                     <button
-                      onClick={() => removeFromCart(item.variant_id)}
-                      className="liquid-glass-btn text-neutral-500 hover:text-rose-600 transition-colors p-2"
-                      title="Xóa khỏi giỏ hàng"
+                      onClick={() => removeFromCart(item.id)}
+                      className="p-1.5 border border-zinc-800 hover:border-rose-900 text-zinc-500 hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Xóa món hàng"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
 
+          </div>
+
+          {/* Cột Phải: Tóm Tắt Đơn Hàng (1 Col) */}
+          <div className="space-y-4">
+            <div className="p-5 bg-[#0c0c0c] border border-zinc-800 font-mono text-xs space-y-5">
+              <h3 className="font-bold text-white uppercase tracking-widest text-sm border-b border-zinc-800 pb-3">
+                TÓM TẮT ĐƠN HÀNG
+              </h3>
+
+              {/* Ô Nhập Voucher */}
+              <form onSubmit={handleApplyCoupon} className="space-y-2">
+                <label className="text-[10px] text-zinc-400 uppercase tracking-wider block">
+                  MÃ GIẢM GIÁ (VOUCHER):
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Mã: WELCOME10 / FREESHIP"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="flex-1 bg-[#161616] border border-zinc-800 p-2 text-white font-bold focus:outline-none focus:border-zinc-500 uppercase text-xs"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold uppercase tracking-wider text-[11px] cursor-pointer"
+                  >
+                    ÁP DỤNG
+                  </button>
+                </div>
+                {coupon && (
+                  <div className="flex items-center justify-between p-2 bg-emerald-950/40 border border-emerald-900 text-emerald-400 text-[11px]">
+                    <span>✓ Đã dùng: {coupon.code}</span>
+                    <button onClick={removeCoupon} className="text-zinc-500 hover:text-white underline">
+                      Gỡ
+                    </button>
+                  </div>
+                )}
+              </form>
+
+              {/* Ô Điểm Loyalty (Thành viên) */}
+              {user && (
+                <form onSubmit={handleApplyPoints} className="space-y-2 border-t border-zinc-900 pt-3">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-zinc-400 uppercase">DÙNG ĐIỂM LOYALTY:</span>
+                    <span className="text-amber-300 font-bold">KHẢ DỤNG: {user.loyalty_points || 0} PTS</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max={user.loyalty_points || 0}
+                      value={pointsInput}
+                      onChange={(e) => setPointsInput(e.target.value)}
+                      className="flex-1 bg-[#161616] border border-zinc-800 p-2 text-white font-bold focus:outline-none focus:border-zinc-500 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold uppercase tracking-wider text-[11px] cursor-pointer"
+                    >
+                      DÙNG ĐIỂM
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Bảng Chi Phí */}
+              <div className="space-y-2 pt-3 border-t border-zinc-800 text-[11px]">
+                <div className="flex justify-between text-zinc-400">
+                  <span>Tạm tính hàng hóa:</span>
+                  <span className="text-white">{subtotal.toLocaleString('vi-VN')}₫</span>
                 </div>
 
-                {/* Line Total */}
-                <div className="text-right hidden sm:block shrink-0">
-                  <span className="font-black text-neutral-900 text-base">
-                    {(item.price * item.quantity).toLocaleString('vi-VN')}₫
+                <div className="flex justify-between text-zinc-400">
+                  <span>Phí vận chuyển:</span>
+                  <span className="text-white">
+                    {shippingFee === 0 ? (
+                      <strong className="text-emerald-400">MIỄN PHÍ</strong>
+                    ) : (
+                      `${shippingFee.toLocaleString('vi-VN')}₫`
+                    )}
                   </span>
                 </div>
 
-              </div>
-            ))}
-          </div>
-
-          {/* Quick return policy note */}
-          <div className="p-3.5 liquid-glass rounded-sm text-xs text-neutral-600 flex items-center gap-2 border border-neutral-200">
-            <span>💡 Khách hàng thành viên có quyền đổi trả trang phục trong vòng 7 ngày sau khi nhận hàng.</span>
-          </div>
-
-        </div>
-
-        {/* Right Column: Order Summary & Constraints */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          <div className="bg-white/95 liquid-glass p-6 rounded-sm border border-neutral-200/80 shadow-md space-y-5">
-            <h3 className="font-black text-neutral-900 text-base uppercase tracking-wider">Tóm Tắt Đơn Hàng</h3>
-
-            {/* Form Mã Giảm Giá (bảng coupons) */}
-            <div>
-              <label className="text-xs font-bold text-neutral-800 flex items-center gap-1.5 mb-1.5">
-                <Tag className="w-3.5 h-3.5 text-amber-600" /> Mã Giảm Giá / Voucher
-              </label>
-
-              {coupon ? (
-                <div className="flex items-center justify-between p-2.5 liquid-glass border border-amber-300 rounded-sm text-xs">
-                  <div>
-                    <span className="font-mono font-bold text-amber-900">{coupon.code}</span>
-                    <p className="text-[11px] text-amber-700">{coupon.name}</p>
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-400">
+                    <span>Giảm giá Voucher:</span>
+                    <span>-{couponDiscount.toLocaleString('vi-VN')}₫</span>
                   </div>
-                  <button onClick={removeCoupon} className="text-xs text-rose-600 font-bold hover:underline">
-                    Gỡ bỏ
-                  </button>
+                )}
+
+                {pointsDiscount > 0 && (
+                  <div className="flex justify-between text-amber-400">
+                    <span>Giảm trừ Loyalty:</span>
+                    <span>-{pointsDiscount.toLocaleString('vi-VN')}₫</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center pt-3 border-t border-zinc-800 text-sm">
+                  <strong className="text-white font-bold uppercase">TỔNG THANH TOÁN:</strong>
+                  <strong className="text-xl font-bold text-white font-mono">
+                    {total.toLocaleString('vi-VN')}₫
+                  </strong>
                 </div>
-              ) : (
-                <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="VD: WELCOME10"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    className="flex-1 bg-white border border-neutral-300 rounded-sm px-3 py-2 text-xs font-mono uppercase focus:outline-none focus:border-neutral-900"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 liquid-glass-btn-dark text-white rounded-sm text-xs font-bold"
-                  >
-                    Áp dụng
-                  </button>
-                </form>
-              )}
-            </div>
-
-            {/* Điểm Tích Lũy Loyalty (bảng loyalty_transactions) */}
-            {user ? (
-              <div className="border-t border-neutral-200/60 pt-4">
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <label className="font-bold text-neutral-800 flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5 text-amber-600" /> Dùng Điểm Loyalty ({user.loyalty_points} điểm)
-                  </label>
-                  <span className="text-[11px] text-neutral-400">1đ = 1.000₫</span>
-                </div>
-
-                <form onSubmit={handleApplyPoints} className="flex gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max={user.loyalty_points}
-                    value={pointsInput}
-                    onChange={(e) => setPointsInput(e.target.value)}
-                    className="flex-1 bg-white border border-neutral-300 rounded-sm px-3 py-2 text-xs font-bold focus:outline-none focus:border-neutral-900"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 liquid-glass-btn text-neutral-800 rounded-sm text-xs font-bold"
-                  >
-                    Dùng điểm
-                  </button>
-                </form>
-              </div>
-            ) : (
-              <div className="liquid-glass p-3 rounded-sm border border-amber-300/60 text-[11px] text-amber-950 flex items-start gap-2">
-                <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>
-                  Đăng nhập tài khoản khách hàng để tích điểm loyalty và thanh toán đơn hàng.
-                </span>
-              </div>
-            )}
-
-            {/* Breakdown chi phí */}
-            <div className="border-t border-neutral-200/60 pt-4 space-y-2.5 text-xs text-neutral-600">
-              <div className="flex justify-between">
-                <span>Tiền hàng (Tạm tính)</span>
-                <span className="font-bold text-neutral-900">{subtotal.toLocaleString('vi-VN')}₫</span>
               </div>
 
-              <div className="flex justify-between">
-                <span>Phí vận chuyển</span>
-                <span className="font-bold text-neutral-900">
-                  {shippingFee === 0 ? (
-                    <span className="text-emerald-600 font-bold">MIỄN PHÍ (≥500k)</span>
-                  ) : (
-                    `${shippingFee.toLocaleString('vi-VN')}₫`
-                  )}
-                </span>
-              </div>
+              {/* Nút Thanh Toán */}
+              <button
+                onClick={() => navigate('/checkout')}
+                className="w-full py-3.5 bg-white hover:bg-zinc-200 text-black font-mono text-xs font-bold tracking-widest uppercase flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+              >
+                <span>TIẾN HÀNH ĐẶT HÀNG</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
 
-              {couponDiscount > 0 && (
-                <div className="flex justify-between text-amber-600 font-bold">
-                  <span>Voucher giảm giá</span>
-                  <span>-{couponDiscount.toLocaleString('vi-VN')}₫</span>
-                </div>
-              )}
-
-              {pointsDiscount > 0 && (
-                <div className="flex justify-between text-amber-600 font-bold">
-                  <span>Điểm loyalty ({pointsUsed} điểm)</span>
-                  <span>-{pointsDiscount.toLocaleString('vi-VN')}₫</span>
-                </div>
-              )}
-
-              <div className="border-t border-neutral-200 pt-3 flex justify-between items-baseline">
-                <span className="font-black text-neutral-900 text-sm uppercase">Tổng thanh toán:</span>
-                <span className="font-black text-neutral-900 text-2xl text-amber-600">
-                  {total.toLocaleString('vi-VN')}₫
-                </span>
+              <div className="text-[10px] text-zinc-500 text-center font-sans">
+                Hỗ trợ Khách Thành Viên & Khách Vãng Lai (Guest Checkout).
               </div>
             </div>
-
-            {/* Nút Thanh Toán góc cạnh Liquid Glass */}
-            <button
-              onClick={handleCheckoutClick}
-              className="w-full py-3.5 liquid-glass-btn-accent text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl"
-            >
-              Tiến Hành Đặt Hàng <ArrowRight className="w-4 h-4" />
-            </button>
-
           </div>
 
         </div>
+      )}
 
-      </div>
     </div>
   );
 }

@@ -17,11 +17,16 @@
 }
 
 .font-mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .bg-dot-matrix {
   background-image: radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.light .bg-dot-matrix {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.12) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 
@@ -30,9 +35,20 @@
   background-size: 16px 16px;
 }
 
+.light .bg-dot-matrix-subtle {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
 .bg-grid-tech {
   background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
                     linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.light .bg-grid-tech {
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
@@ -179,3 +195,205 @@
 .neo-card:hover {
   border-color: rgba(255, 255, 255, 0.22);
 }
+
+/* ============================================================================
+   LIGHT MODE SYSTEM (GIAO DIỆN SÁNG TỐI GIẢN CHUẨN SWISS GRID)
+   ============================================================================ */
+.light {
+  color-scheme: light;
+}
+
+.light body {
+  background-color: #f8f9fa !important;
+  color: #09090b !important;
+}
+
+/* Base Surfaces & Backgrounds */
+.light .bg-\[\#080808\],
+.light .bg-\[\#0c0c0c\],
+.light .bg-\[\#121212\],
+.light .bg-\[\#141414\],
+.light .bg-\[\#161616\],
+.light .bg-black {
+  background-color: #ffffff !important;
+}
+
+.light .bg-\[\#080808\]\/92,
+.light .bg-\[\#080808\]\/95,
+.light .bg-\[\#080808\]\/85,
+.light .bg-\[\#080808\]\/90 {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+}
+
+.light .bg-zinc-950,
+.light .bg-zinc-950\/30,
+.light .bg-zinc-950\/40,
+.light .bg-zinc-950\/60,
+.light .bg-zinc-950\/80,
+.light .bg-zinc-950\/90 {
+  background-color: #f4f4f5 !important;
+}
+
+.light .bg-zinc-900,
+.light .bg-zinc-900\/40,
+.light .bg-zinc-900\/50,
+.light .bg-zinc-900\/60,
+.light .bg-zinc-900\/80 {
+  background-color: #e4e4e7 !important;
+}
+
+/* Typography & Contrast */
+.light .text-\[\#fafafa\],
+.light .text-white,
+.light .text-zinc-100,
+.light .text-zinc-200 {
+  color: #09090b !important;
+}
+
+.light .text-zinc-300,
+.light .text-zinc-400 {
+  color: #4b5563 !important;
+}
+
+.light .text-zinc-500,
+.light .text-\[\#a1a1aa\] {
+  color: #6b7280 !important;
+}
+
+/* Borders & Dividers */
+.light .border-zinc-800,
+.light .border-zinc-700,
+.light .border-zinc-900,
+.light .border-zinc-600 {
+  border-color: #e5e7eb !important;
+}
+
+.light .divide-zinc-800 > :not([hidden]) ~ :not([hidden]),
+.light .divide-zinc-900 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e5e7eb !important;
+}
+
+/* Form Inputs */
+.light input,
+.light textarea,
+.light select {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border-color: #d1d5db !important;
+}
+
+.light input::placeholder,
+.light textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Badges in Light Mode */
+.light .product-sale-badge {
+  background-color: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
+}
+
+.light .product-stock-badge {
+  background-color: #f0fdf4 !important;
+  color: #15803d !important;
+  border-color: #bbf7d0 !important;
+}
+
+/* Product Card Action Buttons in Light Mode */
+.light .product-card-btn-view {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border-color: #d1d5db !important;
+}
+
+.light .product-card-btn-view:hover {
+  background-color: #f3f4f6 !important;
+  border-color: #111827 !important;
+  color: #000000 !important;
+}
+
+.light .product-card-btn-add {
+  background-color: #111827 !important;
+  color: #ffffff !important;
+  border-color: #111827 !important;
+}
+
+.light .product-card-btn-add:hover {
+  background-color: #000000 !important;
+}
+
+/* Navbar Cart Button */
+.navbar-cart-btn {
+  background-color: #fafafa;
+  color: #080808;
+}
+
+.light .navbar-cart-btn {
+  background-color: #09090b !important;
+  color: #fafafa !important;
+}
+
+.light .navbar-cart-btn:hover {
+  background-color: #27272a !important;
+}
+
+/* Color Swatch Dots */
+.color-swatch-dot {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.light .color-swatch-dot {
+  border: 1px solid #d1d5db !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.light .color-swatch-dot.is-active {
+  outline: 2px solid #111827 !important;
+  outline-offset: 2px !important;
+  transform: scale(1.15);
+}
+
+.dark .color-swatch-dot.is-active,
+:not(.light) .color-swatch-dot.is-active {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px !important;
+  transform: scale(1.15);
+}
+
+/* Hero Section Mask & Floating Cards */
+.hero-radial-mask {
+  background: radial-gradient(circle at 50% 50%, rgba(8, 8, 8, 0.95) 0%, rgba(8, 8, 8, 0.75) 45%, rgba(8, 8, 8, 0.2) 80%, transparent 100%);
+}
+
+.light .hero-radial-mask {
+  background: radial-gradient(circle at 50% 50%, rgba(248, 249, 250, 0.96) 0%, rgba(248, 249, 250, 0.86) 45%, rgba(248, 249, 250, 0.35) 80%, transparent 100%) !important;
+}
+
+.light .hero-floating-card {
+  border-color: #e5e7eb !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+.light .hero-sec-btn {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border-color: #d1d5db !important;
+}
+
+.light .hero-sec-btn:hover {
+  background-color: #f3f4f6 !important;
+  border-color: #09090b !important;
+}
+
+.light .product-card-action-bar {
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.75) 65%, transparent 100%) !important;
+}
+
+.light aside {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: #e5e7eb !important;
+}
+

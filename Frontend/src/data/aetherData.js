@@ -146,9 +146,9 @@ export const HERO_FLOATING_CARDS = [
   {
     id: 'hero-card-11',
     image: 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?auto=format&fit=crop&w=600&q=80',
-    title: 'SỔ CÁI // NHẬP KHO',
-    price: 'CSDL LIVE',
-    tag: 'TRIGGER POSTGRESQL',
+    title: 'CHỨNG NHẬN // CHẤT LƯỢNG',
+    price: 'XUẤT SẮC',
+    tag: 'ĐẠT CHUẨN ISO',
     pos: { top: '22%', left: '12%' },
     width: 'w-32 sm:w-40',
     aspect: 'aspect-[4/5]',
@@ -260,11 +260,11 @@ export const CRAFTSMANSHIP_PILLARS = [
   },
   {
     num: '3',
-    title: 'Cam Kết Đổi Trả & Tồn Kho CSDL',
-    subtitle: 'Đổi hàng 30 ngày, quản trị minh bạch',
+    title: 'Chính Sách Hậu Mãi & Đổi Trả Tiên Phong',
+    subtitle: 'Đổi hàng 30 ngày, phục vụ tận tâm',
     description:
-      'Hệ thống quản lý tồn kho động theo chuẩn 37 bảng CSDL PostgreSQL. Hỗ trợ khách hàng đổi mẫu, đổi size tại bất kỳ cửa hàng nào trên toàn quốc hoặc trả hàng trực tuyến trong vòng 30 ngày.',
-    specs: ['ĐỔI TRẢ 30 NGÀY TOÀN QUỐC', 'MIỄN PHÍ VẬN CHUYỂN TỪ 500K', 'TÍCH ĐIỂM LOYALTY TỰ ĐỘNG'],
+      'Chính sách hậu mãi vượt trội đồng hành cùng trải nghiệm khách hàng. Hỗ trợ đổi mẫu, đổi size tại bất kỳ showroom nào trên toàn quốc hoặc trả hàng trực tuyến tận nơi trong vòng 30 ngày.',
+    specs: ['ĐỔI TRẢ 30 NGÀY TOÀN QUỐC', 'MIỄN PHÍ VẬN CHUYỂN TỪ 500K', 'TÍCH LŨY ĐIỂM THƯỞNG MỌI ĐƠN'],
   },
 ];
 
@@ -308,6 +308,6 @@ export const MARQUEE_ITEMS = [
   'NAM ÁO KHOÁC GIẢ LÔNG CỪU CẢN GIÓ [486116]',
   'MIỄN PHÍ VẬN CHUYỂN TỪ 500.000₫',
   'ĐỔI TRẢ 30 NGÀY TẠI MỌI CỬA HÀNG TOÀN QUỐC',
-  'TÍCH ĐIỂM LOYALTY TỰ ĐỘNG THEO CSDL POSTGRESQL',
+  'TÍCH LŨY ĐIỂM THƯỞNG CHO MỌI ĐƠN HÀNG',
   'GIAO HÀNG TẬN NƠI KIỂM HÀNG THANH TOÁN COD',
 ];

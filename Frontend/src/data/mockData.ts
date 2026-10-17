@@ -35,35 +35,27 @@ export const MOCK_SIZES: Size[] = [
   { id: 2, name: 'M', sort_order: 2 },
   { id: 3, name: 'L', sort_order: 3 },
   { id: 4, name: 'XL', sort_order: 4 },
-  { id: 5, name: '29', sort_order: 10 },
-  { id: 6, name: '30', sort_order: 11 },
-  { id: 7, name: '31', sort_order: 12 },
 ];
 
 export const MOCK_COLORS: Color[] = [
-  { id: 1, name: 'Den', hex_code: '#000000' },
-  { id: 2, name: 'Trang', hex_code: '#FFFFFF' },
-  { id: 3, name: 'Xanh', hex_code: '#1F3A93' },
-  { id: 4, name: 'Beige', hex_code: '#E8D8C8' },
-  { id: 5, name: 'Navy', hex_code: '#1E293B' },
+  { id: 1, name: 'Trắng', hex_code: '#FFFFFF' },
+  { id: 2, name: 'Beige', hex_code: '#E8D8C8' },
+  { id: 3, name: 'Navy', hex_code: '#1E293B' },
+  { id: 4, name: 'Be / Tự Nhiên', hex_code: '#E8DFC8' },
 ];
 
 export const MOCK_MATERIALS: Material[] = [
-  { id: 1, name: 'Cotton' },
-  { id: 2, name: 'Denim' },
-  { id: 3, name: 'Visco & Polyeste tái chế' },
-  { id: 4, name: 'Giả Lông Cừu cản gió' },
+  { id: 1, name: 'Vải Rayon' },
+  { id: 2, name: 'Lông Cừu Cản Gió' },
 ];
 
 // ============================================================================
-// 2. DANH MỤC (CATEGORIES - Theo 03_seed_demo.sql & Streetwear)
+// 2. DANH MỤC (CATEGORIES - 2 LOẠI: ÁO NỮ VÀ ÁO NAM)
 // ============================================================================
 
 export const MOCK_CATEGORIES: Category[] = [
-  { id: 1, parent_id: null, name: 'Áo thun', slug: 'ao-thun', is_active: true, sort_order: 1 },
-  { id: 2, parent_id: null, name: 'Quần jean', slug: 'quan-jean', is_active: true, sort_order: 2 },
-  { id: 3, parent_id: null, name: 'Áo khoác', slug: 'ao-khoac', is_active: true, sort_order: 3 },
-  { id: 4, parent_id: null, name: 'Áo kiểu & Sơ mi', slug: 'ao-kieu-so-mi', is_active: true, sort_order: 4 },
+  { id: 1, parent_id: null, name: 'ÁO NỮ', slug: 'ao-nu', is_active: true, sort_order: 1 },
+  { id: 2, parent_id: null, name: 'ÁO NAM', slug: 'ao-nam', is_active: true, sort_order: 2 },
 ];
 
 // ============================================================================
@@ -86,67 +78,59 @@ export const MOCK_SYSTEM_SETTINGS: SystemSetting[] = [
   { key: 'loyalty.point_value_vnd', value: '1000', group_name: 'general', updated_by: null, updated_at: '2026-10-01T00:00:00Z' },
 ];
 
-// ============================================================================
-// 4. BIẾN THỂ & VIEW TỒN KHO (v_inventory_available theo 01_schema & 03_seed_demo)
-// ============================================================================
-
 export const MOCK_PRODUCT_VARIANTS: ProductVariant[] = [
-  // Sản phẩm 1: Ao thun basic (03_seed_demo.sql)
-  { id: 11, product_id: 1, sku: 'AT01-DEN-M', size_id: 2, color_id: 1, material_id: 1, price: 199000, is_active: true, created_at: '2026-10-01T00:00:00Z' },
-  { id: 12, product_id: 1, sku: 'AT01-DEN-L', size_id: 3, color_id: 1, material_id: 1, price: 199000, is_active: true, created_at: '2026-10-01T00:00:00Z' },
-  { id: 13, product_id: 1, sku: 'AT01-TRANG-M', size_id: 2, color_id: 2, material_id: 1, price: 199000, is_active: true, created_at: '2026-10-01T00:00:00Z' },
+  // Sản phẩm 1: Áo Nữ Rayon 479073 (product_id = 1) - Màu Trắng (color_id = 1)
+  { id: 101, product_id: 1, sku: 'AKN-479073-00-S', size_id: 1, color_id: 1, material_id: 1, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 102, product_id: 1, sku: 'AKN-479073-00-M', size_id: 2, color_id: 1, material_id: 1, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 103, product_id: 1, sku: 'AKN-479073-00-L', size_id: 3, color_id: 1, material_id: 1, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 104, product_id: 1, sku: 'AKN-479073-00-XL', size_id: 4, color_id: 1, material_id: 1, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  // Sản phẩm 1: Áo Nữ Rayon 479073 (product_id = 1) - Màu Beige (color_id = 2)
+  { id: 105, product_id: 1, sku: 'AKN-479073-10-S', size_id: 1, color_id: 2, material_id: 1, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 106, product_id: 1, sku: 'AKN-479073-10-M', size_id: 2, color_id: 2, material_id: 1, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 107, product_id: 1, sku: 'AKN-479073-10-L', size_id: 3, color_id: 2, material_id: 1, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 108, product_id: 1, sku: 'AKN-479073-10-XL', size_id: 4, color_id: 2, material_id: 1, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
 
-  // Sản phẩm 2: Quan jean slim (03_seed_demo.sql)
-  { id: 21, product_id: 2, sku: 'QJ01-XANH-30', size_id: 6, color_id: 3, material_id: 2, price: 450000, is_active: true, created_at: '2026-10-01T00:00:00Z' },
-
-  // Sản phẩm 3: Streetwear Nữ - Áo Kiểu Vải Rayon 479073
-  { id: 101, product_id: 3, sku: 'AKN-479073-00-S', size_id: 1, color_id: 2, material_id: 3, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 102, product_id: 3, sku: 'AKN-479073-00-M', size_id: 2, color_id: 2, material_id: 3, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 103, product_id: 3, sku: 'AKN-479073-00-L', size_id: 3, color_id: 2, material_id: 3, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 104, product_id: 3, sku: 'AKN-479073-00-XL', size_id: 4, color_id: 2, material_id: 3, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 105, product_id: 3, sku: 'AKN-479073-10-M', size_id: 2, color_id: 4, material_id: 3, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 106, product_id: 3, sku: 'AKN-479073-10-L', size_id: 3, color_id: 4, material_id: 3, price: 599000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-
-  // Sản phẩm 4: Streetwear Nam - Áo Khoác Lông Cừu 486116
-  { id: 201, product_id: 4, sku: 'AKM-486116-69-S', size_id: 1, color_id: 5, material_id: 4, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 202, product_id: 4, sku: 'AKM-486116-69-M', size_id: 2, color_id: 5, material_id: 4, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 203, product_id: 4, sku: 'AKM-486116-69-L', size_id: 3, color_id: 5, material_id: 4, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 204, product_id: 4, sku: 'AKM-486116-69-XL', size_id: 4, color_id: 5, material_id: 4, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 205, product_id: 4, sku: 'AKM-486116-09-M', size_id: 2, color_id: 1, material_id: 4, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
-  { id: 206, product_id: 4, sku: 'AKM-486116-09-L', size_id: 3, color_id: 1, material_id: 4, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  // Sản phẩm 2: Áo Nam Lông Cừu 486116 (product_id = 2) - Màu Navy (color_id = 3)
+  { id: 201, product_id: 2, sku: 'AKM-486116-69-S', size_id: 1, color_id: 3, material_id: 2, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 202, product_id: 2, sku: 'AKM-486116-69-M', size_id: 2, color_id: 3, material_id: 2, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 203, product_id: 2, sku: 'AKM-486116-69-L', size_id: 3, color_id: 3, material_id: 2, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 204, product_id: 2, sku: 'AKM-486116-69-XL', size_id: 4, color_id: 3, material_id: 2, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  // Sản phẩm 2: Áo Nam Lông Cừu 486116 (product_id = 2) - Màu Be / Tự Nhiên (color_id = 4)
+  { id: 205, product_id: 2, sku: 'AKM-486116-30-S', size_id: 1, color_id: 4, material_id: 2, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 206, product_id: 2, sku: 'AKM-486116-30-M', size_id: 2, color_id: 4, material_id: 2, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 207, product_id: 2, sku: 'AKM-486116-30-L', size_id: 3, color_id: 4, material_id: 2, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
+  { id: 208, product_id: 2, sku: 'AKM-486116-30-XL', size_id: 4, color_id: 4, material_id: 2, price: 899000, is_active: true, created_at: '2026-10-05T00:00:00Z' },
 ];
 
 /**
  * View v_inventory_available (Dữ liệu tồn kho thực tế - Giữ chỗ = Tồn kho có thể bán)
- * Theo đúng số lượng từ PN0001 trong 03_seed_demo.sql
  */
 export const MOCK_INVENTORY_AVAILABLE: InventoryAvailableView[] = [
-  { variant_id: 11, sku: 'AT01-DEN-M', product_name: 'Áo thun basic', size: 'M', color: 'Đen', material: 'Cotton', quantity_on_hand: 50, quantity_reserved: 0, quantity_available: 50 },
-  { variant_id: 12, sku: 'AT01-DEN-L', product_name: 'Áo thun basic', size: 'L', color: 'Đen', material: 'Cotton', quantity_on_hand: 40, quantity_reserved: 2, quantity_available: 38 },
-  { variant_id: 13, sku: 'AT01-TRANG-M', product_name: 'Áo thun basic', size: 'M', color: 'Trắng', material: 'Cotton', quantity_on_hand: 30, quantity_reserved: 0, quantity_available: 30 },
-  { variant_id: 21, sku: 'QJ01-XANH-30', product_name: 'Quần jean slim', size: '30', color: 'Xanh', material: 'Denim', quantity_on_hand: 20, quantity_reserved: 1, quantity_available: 19 },
-  { variant_id: 101, sku: 'AKN-479073-00-S', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'S', color: 'Trắng', material: 'Rayon', quantity_on_hand: 24, quantity_reserved: 2, quantity_available: 22 },
-  { variant_id: 102, sku: 'AKN-479073-00-M', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'M', color: 'Trắng', material: 'Rayon', quantity_on_hand: 35, quantity_reserved: 0, quantity_available: 35 },
-  { variant_id: 103, sku: 'AKN-479073-00-L', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'L', color: 'Trắng', material: 'Rayon', quantity_on_hand: 18, quantity_reserved: 0, quantity_available: 18 },
-  { variant_id: 104, sku: 'AKN-479073-00-XL', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'XL', color: 'Trắng', material: 'Rayon', quantity_on_hand: 10, quantity_reserved: 0, quantity_available: 10 },
-  { variant_id: 105, sku: 'AKN-479073-10-M', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'M', color: 'Beige', material: 'Rayon', quantity_on_hand: 28, quantity_reserved: 1, quantity_available: 27 },
-  { variant_id: 106, sku: 'AKN-479073-10-L', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'L', color: 'Beige', material: 'Rayon', quantity_on_hand: 20, quantity_reserved: 0, quantity_available: 20 },
-  { variant_id: 201, sku: 'AKM-486116-69-S', product_name: 'Nam Áo Khoác Lông Cừu', size: 'S', color: 'Navy', material: 'Lông cừu', quantity_on_hand: 15, quantity_reserved: 0, quantity_available: 15 },
-  { variant_id: 202, sku: 'AKM-486116-69-M', product_name: 'Nam Áo Khoác Lông Cừu', size: 'M', color: 'Navy', material: 'Lông cừu', quantity_on_hand: 35, quantity_reserved: 3, quantity_available: 32 },
-  { variant_id: 203, sku: 'AKM-486116-69-L', product_name: 'Nam Áo Khoác Lông Cừu', size: 'L', color: 'Navy', material: 'Lông cừu', quantity_on_hand: 20, quantity_reserved: 0, quantity_available: 20 },
-  { variant_id: 204, sku: 'AKM-486116-69-XL', product_name: 'Nam Áo Khoác Lông Cừu', size: 'XL', color: 'Navy', material: 'Lông cừu', quantity_on_hand: 12, quantity_reserved: 0, quantity_available: 12 },
-  { variant_id: 205, sku: 'AKM-486116-09-M', product_name: 'Nam Áo Khoác Lông Cừu', size: 'M', color: 'Đen', material: 'Lông cừu', quantity_on_hand: 30, quantity_reserved: 0, quantity_available: 30 },
-  { variant_id: 206, sku: 'AKM-486116-09-L', product_name: 'Nam Áo Khoác Lông Cừu', size: 'L', color: 'Đen', material: 'Lông cừu', quantity_on_hand: 18, quantity_reserved: 0, quantity_available: 18 },
+  { variant_id: 101, sku: 'AKN-479073-00-S', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'S', color: 'Trắng', material: 'Vải Rayon', quantity_on_hand: 24, quantity_reserved: 2, quantity_available: 22 },
+  { variant_id: 102, sku: 'AKN-479073-00-M', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'M', color: 'Trắng', material: 'Vải Rayon', quantity_on_hand: 35, quantity_reserved: 0, quantity_available: 35 },
+  { variant_id: 103, sku: 'AKN-479073-00-L', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'L', color: 'Trắng', material: 'Vải Rayon', quantity_on_hand: 18, quantity_reserved: 0, quantity_available: 18 },
+  { variant_id: 104, sku: 'AKN-479073-00-XL', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'XL', color: 'Trắng', material: 'Vải Rayon', quantity_on_hand: 10, quantity_reserved: 0, quantity_available: 10 },
+  { variant_id: 105, sku: 'AKN-479073-10-S', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'S', color: 'Beige', material: 'Vải Rayon', quantity_on_hand: 15, quantity_reserved: 0, quantity_available: 15 },
+  { variant_id: 106, sku: 'AKN-479073-10-M', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'M', color: 'Beige', material: 'Vải Rayon', quantity_on_hand: 28, quantity_reserved: 1, quantity_available: 27 },
+  { variant_id: 107, sku: 'AKN-479073-10-L', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'L', color: 'Beige', material: 'Vải Rayon', quantity_on_hand: 20, quantity_reserved: 0, quantity_available: 20 },
+  { variant_id: 108, sku: 'AKN-479073-10-XL', product_name: 'Nữ Áo Kiểu Vải Rayon', size: 'XL', color: 'Beige', material: 'Vải Rayon', quantity_on_hand: 12, quantity_reserved: 0, quantity_available: 12 },
+
+  { variant_id: 201, sku: 'AKM-486116-69-S', product_name: 'Nam Áo Khoác Lông Cừu', size: 'S', color: 'Navy', material: 'Lông Cừu Cản Gió', quantity_on_hand: 15, quantity_reserved: 0, quantity_available: 15 },
+  { variant_id: 202, sku: 'AKM-486116-69-M', product_name: 'Nam Áo Khoác Lông Cừu', size: 'M', color: 'Navy', material: 'Lông Cừu Cản Gió', quantity_on_hand: 35, quantity_reserved: 3, quantity_available: 32 },
+  { variant_id: 203, sku: 'AKM-486116-69-L', product_name: 'Nam Áo Khoác Lông Cừu', size: 'L', color: 'Navy', material: 'Lông Cừu Cản Gió', quantity_on_hand: 20, quantity_reserved: 0, quantity_available: 20 },
+  { variant_id: 204, sku: 'AKM-486116-69-XL', product_name: 'Nam Áo Khoác Lông Cừu', size: 'XL', color: 'Navy', material: 'Lông Cừu Cản Gió', quantity_on_hand: 12, quantity_reserved: 0, quantity_available: 12 },
+  { variant_id: 205, sku: 'AKM-486116-30-S', product_name: 'Nam Áo Khoác Lông Cừu', size: 'S', color: 'Be / Tự Nhiên', material: 'Lông Cừu Cản Gió', quantity_on_hand: 18, quantity_reserved: 0, quantity_available: 18 },
+  { variant_id: 206, sku: 'AKM-486116-30-M', product_name: 'Nam Áo Khoác Lông Cừu', size: 'M', color: 'Be / Tự Nhiên', material: 'Lông Cừu Cản Gió', quantity_on_hand: 30, quantity_reserved: 0, quantity_available: 30 },
+  { variant_id: 207, sku: 'AKM-486116-30-L', product_name: 'Nam Áo Khoác Lông Cừu', size: 'L', color: 'Be / Tự Nhiên', material: 'Lông Cừu Cản Gió', quantity_on_hand: 25, quantity_reserved: 1, quantity_available: 24 },
+  { variant_id: 208, sku: 'AKM-486116-30-XL', product_name: 'Nam Áo Khoác Lông Cừu', size: 'XL', color: 'Be / Tự Nhiên', material: 'Lông Cừu Cản Gió', quantity_on_hand: 14, quantity_reserved: 0, quantity_available: 14 },
 ];
 
 /**
  * View v_product_rating (Điểm đánh giá trung bình & lượt review đã duyệt)
  */
 export const MOCK_PRODUCT_RATINGS: ProductRatingView[] = [
-  { product_id: 1, review_count: 18, avg_rating: 4.8 },
-  { product_id: 2, review_count: 24, avg_rating: 4.7 },
-  { product_id: 3, review_count: 56, avg_rating: 4.9 },
-  { product_id: 4, review_count: 84, avg_rating: 5.0 },
+  { product_id: 1, review_count: 56, avg_rating: 4.9 },
+  { product_id: 2, review_count: 84, avg_rating: 5.0 },
 ];
 
 // ============================================================================
@@ -154,23 +138,23 @@ export const MOCK_PRODUCT_RATINGS: ProductRatingView[] = [
 // ============================================================================
 
 export const MOCK_PRODUCT_IMAGES: ProductImage[] = [
-  // Ảnh Áo thun basic (product_id = 1)
-  { id: 1, product_id: 1, variant_id: 11, url: '/images/products/nam_demo/san_pham1/vngoods_69_486116_3x4.avif', sort_order: 1 },
-  { id: 2, product_id: 1, variant_id: 13, url: '/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif', sort_order: 2 },
+  // Ảnh Áo kiểu Rayon Nữ (product_id = 1)
+  { id: 10, product_id: 1, variant_id: 101, color_id: 1, url: '/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif', sort_order: 1, label: 'Người mẫu: 168cm / Size quần áo: S' },
+  { id: 11, product_id: 1, variant_id: 105, color_id: 2, url: '/images/products/nu_demo/san_pham1/vngoods_10_479073_3x4.avif', sort_order: 2, label: 'Người mẫu: 168cm / Size quần áo: S' },
+  { id: 12, product_id: 1, variant_id: null, color_id: null, url: '/images/products/nu_demo/san_pham1/vngoods_479073_sub3_3x4.avif', sort_order: 3, label: 'Chi tiết thiết kế cổ mở thanh lịch' },
+  { id: 13, product_id: 1, variant_id: null, color_id: null, url: '/images/products/nu_demo/san_pham1/goods_479073_sub14_3x4.avif', sort_order: 4, label: 'Chất vải Rayon mềm mại rủ nhẹ' },
 
-  // Ảnh Quần jean slim (product_id = 2)
-  { id: 3, product_id: 2, variant_id: 21, url: '/images/products/nam_demo/san_pham1/vngoods_486116_sub3_3x4.avif', sort_order: 1 },
-
-  // Ảnh Áo kiểu Rayon Nữ (product_id = 3)
-  { id: 10, product_id: 3, variant_id: 101, url: '/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif', sort_order: 1 },
-  { id: 11, product_id: 3, variant_id: 105, url: '/images/products/nu_demo/san_pham1/vngoods_10_479073_3x4.avif', sort_order: 2 },
-  { id: 12, product_id: 3, variant_id: null, url: '/images/products/nu_demo/san_pham1/vngoods_479073_sub3_3x4.avif', sort_order: 3 },
-  { id: 13, product_id: 3, variant_id: null, url: '/images/products/nu_demo/san_pham1/goods_479073_sub14_3x4.avif', sort_order: 4 },
-
-  // Ảnh Áo khoác lông cừu Nam (product_id = 4)
-  { id: 20, product_id: 4, variant_id: 202, url: '/images/products/nam_demo/san_pham1/vngoods_69_486116_3x4.avif', sort_order: 1 },
-  { id: 21, product_id: 4, variant_id: null, url: '/images/products/nam_demo/san_pham1/vngoods_486116_sub3_3x4.avif', sort_order: 2 },
-  { id: 22, product_id: 4, variant_id: null, url: '/images/products/nam_demo/san_pham1/goods_486116_sub14_3x4.avif', sort_order: 3 },
+  // Ảnh Áo khoác lông cừu Nam (product_id = 2) - Bố cục 4 ảnh đúng như ảnh người dùng chụp!
+  // Góc 1 (Trên - Trái): Người mẫu 176cm mặc màu Be / Tự nhiên
+  { id: 20, product_id: 2, variant_id: 205, color_id: 4, url: '/images/products/nam_demo/san_pham1/vngoods_486116_sub4_3x4.avif', sort_order: 1, label: 'Người mẫu: 176cm / Size quần áo: L' },
+  // Góc 2 (Trên - Phải): Người mẫu 176cm phối đồ màu Navy
+  { id: 21, product_id: 2, variant_id: 201, color_id: 3, url: '/images/products/nam_demo/san_pham1/vngoods_486116_sub3_3x4.avif', sort_order: 2, label: 'Người mẫu: 176cm / Size quần áo: L' },
+  // Góc 3 (Dưới - Trái): Ảnh chụp phẳng 4 màu áo
+  { id: 22, product_id: 2, variant_id: null, color_id: null, url: '/images/products/nam_demo/san_pham1/goods_486116_sub11_3x4.avif', sort_order: 3, label: 'Bảng 4 phối màu áo khoác' },
+  // Góc 4 (Dưới - Phải): Cận cảnh cổ áo lông cừu & cúc bấm hợp kim
+  { id: 23, product_id: 2, variant_id: null, color_id: null, url: '/images/products/nam_demo/san_pham1/goods_486116_sub20_3x4.avif', sort_order: 4, label: 'Cổ đứng cản gió & cúc bấm hợp kim' },
+  // Ảnh phom áo màu Navy
+  { id: 24, product_id: 2, variant_id: 201, color_id: 3, url: '/images/products/nam_demo/san_pham1/vngoods_69_486116_3x4.avif', sort_order: 5, label: 'Phom áo khoác màu Navy' },
 ];
 
 // ============================================================================
@@ -181,70 +165,6 @@ export const MOCK_PRODUCTS_WITH_DETAILS: ProductWithDetails[] = [
   {
     id: 1,
     category_id: 1,
-    name: 'Áo thun basic Cotton',
-    slug: 'ao-thun-basic',
-    description: 'Chất liệu 100% Cotton chải kỹ 220GSM co giãn 4 chiều, thoáng khí, không xù lông. Thiết kế phom rủ hiện đại mang đến cảm giác thoải mái suốt cả ngày.',
-    base_price: 199000, // Giá hiển thị 'Từ 199.000₫'
-    is_visible: true,
-    created_by: 1,
-    created_at: '2026-10-01T00:00:00Z',
-    updated_at: '2026-10-01T00:00:00Z',
-    deleted_at: null,
-    category: MOCK_CATEGORIES[0],
-    rating: MOCK_PRODUCT_RATINGS[0],
-    variants: [
-      {
-        ...MOCK_PRODUCT_VARIANTS[0],
-        size: MOCK_SIZES[1], // M
-        color: MOCK_COLORS[0], // Đen
-        material: MOCK_MATERIALS[0], // Cotton
-        inventory: MOCK_INVENTORY_AVAILABLE[0],
-      },
-      {
-        ...MOCK_PRODUCT_VARIANTS[1],
-        size: MOCK_SIZES[2], // L
-        color: MOCK_COLORS[0], // Đen
-        material: MOCK_MATERIALS[0], // Cotton
-        inventory: MOCK_INVENTORY_AVAILABLE[1],
-      },
-      {
-        ...MOCK_PRODUCT_VARIANTS[2],
-        size: MOCK_SIZES[1], // M
-        color: MOCK_COLORS[1], // Trắng
-        material: MOCK_MATERIALS[0], // Cotton
-        inventory: MOCK_INVENTORY_AVAILABLE[2],
-      },
-    ],
-    images: [MOCK_PRODUCT_IMAGES[0], MOCK_PRODUCT_IMAGES[1]],
-  },
-  {
-    id: 2,
-    category_id: 2,
-    name: 'Quần jean slim Denim',
-    slug: 'quan-jean-slim',
-    description: 'Chất liệu vải Denim 12.5oz dệt thủ công sắc sảo, xử lý giặt stone-wash cho độ bạc màu tự nhiên. Đường may gia cố chịu lực bền bỉ.',
-    base_price: 450000,
-    is_visible: true,
-    created_by: 1,
-    created_at: '2026-10-01T00:00:00Z',
-    updated_at: '2026-10-01T00:00:00Z',
-    deleted_at: null,
-    category: MOCK_CATEGORIES[1],
-    rating: MOCK_PRODUCT_RATINGS[1],
-    variants: [
-      {
-        ...MOCK_PRODUCT_VARIANTS[3],
-        size: MOCK_SIZES[5], // Size 30
-        color: MOCK_COLORS[2], // Xanh
-        material: MOCK_MATERIALS[1], // Denim
-        inventory: MOCK_INVENTORY_AVAILABLE[3],
-      },
-    ],
-    images: [MOCK_PRODUCT_IMAGES[2]],
-  },
-  {
-    id: 3,
-    category_id: 4,
     name: 'Nữ Áo Kiểu Vải Rayon Cổ Mở - Tay Lửng 3/4',
     slug: 'nu-ao-kieu-vai-rayon-co-mo-tay-lung',
     description: 'Phong cách thanh lịch, phù hợp cho những bản phối công sở hiện đại. Chiều dài thân áo và tay áo được tinh chỉnh cân đối, mang đến vẻ ngoài chỉn chu, thời trang.',
@@ -254,43 +174,72 @@ export const MOCK_PRODUCTS_WITH_DETAILS: ProductWithDetails[] = [
     created_at: '2026-10-05T00:00:00Z',
     updated_at: '2026-10-05T00:00:00Z',
     deleted_at: null,
-    category: MOCK_CATEGORIES[3],
-    rating: MOCK_PRODUCT_RATINGS[2],
+    category: MOCK_CATEGORIES[0],
+    rating: MOCK_PRODUCT_RATINGS[0],
+    video_url: '/images/products/nu_demo/san_pham1/video_intro.mp4',
     variants: [
+      {
+        ...MOCK_PRODUCT_VARIANTS[0],
+        size: MOCK_SIZES[0],
+        color: MOCK_COLORS[0],
+        material: MOCK_MATERIALS[0],
+        inventory: MOCK_INVENTORY_AVAILABLE[0],
+      },
+      {
+        ...MOCK_PRODUCT_VARIANTS[1],
+        size: MOCK_SIZES[1],
+        color: MOCK_COLORS[0],
+        material: MOCK_MATERIALS[0],
+        inventory: MOCK_INVENTORY_AVAILABLE[1],
+      },
+      {
+        ...MOCK_PRODUCT_VARIANTS[2],
+        size: MOCK_SIZES[2],
+        color: MOCK_COLORS[0],
+        material: MOCK_MATERIALS[0],
+        inventory: MOCK_INVENTORY_AVAILABLE[2],
+      },
+      {
+        ...MOCK_PRODUCT_VARIANTS[3],
+        size: MOCK_SIZES[3],
+        color: MOCK_COLORS[0],
+        material: MOCK_MATERIALS[0],
+        inventory: MOCK_INVENTORY_AVAILABLE[3],
+      },
       {
         ...MOCK_PRODUCT_VARIANTS[4],
         size: MOCK_SIZES[0],
         color: MOCK_COLORS[1],
-        material: MOCK_MATERIALS[2],
+        material: MOCK_MATERIALS[0],
         inventory: MOCK_INVENTORY_AVAILABLE[4],
       },
       {
         ...MOCK_PRODUCT_VARIANTS[5],
         size: MOCK_SIZES[1],
         color: MOCK_COLORS[1],
-        material: MOCK_MATERIALS[2],
+        material: MOCK_MATERIALS[0],
         inventory: MOCK_INVENTORY_AVAILABLE[5],
       },
       {
         ...MOCK_PRODUCT_VARIANTS[6],
         size: MOCK_SIZES[2],
         color: MOCK_COLORS[1],
-        material: MOCK_MATERIALS[2],
+        material: MOCK_MATERIALS[0],
         inventory: MOCK_INVENTORY_AVAILABLE[6],
       },
       {
-        ...MOCK_PRODUCT_VARIANTS[8],
-        size: MOCK_SIZES[1],
-        color: MOCK_COLORS[3],
-        material: MOCK_MATERIALS[2],
-        inventory: MOCK_INVENTORY_AVAILABLE[8],
+        ...MOCK_PRODUCT_VARIANTS[7],
+        size: MOCK_SIZES[3],
+        color: MOCK_COLORS[1],
+        material: MOCK_MATERIALS[0],
+        inventory: MOCK_INVENTORY_AVAILABLE[7],
       },
     ],
-    images: [MOCK_PRODUCT_IMAGES[3], MOCK_PRODUCT_IMAGES[4], MOCK_PRODUCT_IMAGES[5], MOCK_PRODUCT_IMAGES[6]],
+    images: MOCK_PRODUCT_IMAGES.filter((img) => img.product_id === 1),
   },
   {
-    id: 4,
-    category_id: 3,
+    id: 2,
+    category_id: 2,
     name: 'Nam Áo Khoác Giả Lông Cừu Cản Gió (Kéo Khóa)',
     slug: 'nam-ao-khoac-gia-long-cuu-can-gio',
     description: 'Lớp ngoài lông cừu mềm mại, lớp lót cản gió chuyên dụng giúp giữ nhiệt tối ưu trong điều kiện thời tiết khắc nghiệt. Phom dáng mạnh mẽ, thời thượng.',
@@ -300,39 +249,68 @@ export const MOCK_PRODUCTS_WITH_DETAILS: ProductWithDetails[] = [
     created_at: '2026-10-05T00:00:00Z',
     updated_at: '2026-10-05T00:00:00Z',
     deleted_at: null,
-    category: MOCK_CATEGORIES[2],
-    rating: MOCK_PRODUCT_RATINGS[3],
+    category: MOCK_CATEGORIES[1],
+    rating: MOCK_PRODUCT_RATINGS[1],
+    video_url: '/images/products/nam_demo/san_pham1/video_intro_nam.mp4',
     variants: [
       {
-        ...MOCK_PRODUCT_VARIANTS[10],
+        ...MOCK_PRODUCT_VARIANTS[8],
         size: MOCK_SIZES[0],
-        color: MOCK_COLORS[4],
-        material: MOCK_MATERIALS[3],
+        color: MOCK_COLORS[2],
+        material: MOCK_MATERIALS[1],
+        inventory: MOCK_INVENTORY_AVAILABLE[8],
+      },
+      {
+        ...MOCK_PRODUCT_VARIANTS[9],
+        size: MOCK_SIZES[1],
+        color: MOCK_COLORS[2],
+        material: MOCK_MATERIALS[1],
+        inventory: MOCK_INVENTORY_AVAILABLE[9],
+      },
+      {
+        ...MOCK_PRODUCT_VARIANTS[10],
+        size: MOCK_SIZES[2],
+        color: MOCK_COLORS[2],
+        material: MOCK_MATERIALS[1],
         inventory: MOCK_INVENTORY_AVAILABLE[10],
       },
       {
         ...MOCK_PRODUCT_VARIANTS[11],
-        size: MOCK_SIZES[1],
-        color: MOCK_COLORS[4],
-        material: MOCK_MATERIALS[3],
+        size: MOCK_SIZES[3],
+        color: MOCK_COLORS[2],
+        material: MOCK_MATERIALS[1],
         inventory: MOCK_INVENTORY_AVAILABLE[11],
       },
       {
         ...MOCK_PRODUCT_VARIANTS[12],
-        size: MOCK_SIZES[2],
-        color: MOCK_COLORS[4],
-        material: MOCK_MATERIALS[3],
+        size: MOCK_SIZES[0],
+        color: MOCK_COLORS[3],
+        material: MOCK_MATERIALS[1],
         inventory: MOCK_INVENTORY_AVAILABLE[12],
       },
       {
-        ...MOCK_PRODUCT_VARIANTS[14],
+        ...MOCK_PRODUCT_VARIANTS[13],
         size: MOCK_SIZES[1],
-        color: MOCK_COLORS[0],
-        material: MOCK_MATERIALS[3],
+        color: MOCK_COLORS[3],
+        material: MOCK_MATERIALS[1],
+        inventory: MOCK_INVENTORY_AVAILABLE[13],
+      },
+      {
+        ...MOCK_PRODUCT_VARIANTS[14],
+        size: MOCK_SIZES[2],
+        color: MOCK_COLORS[3],
+        material: MOCK_MATERIALS[1],
         inventory: MOCK_INVENTORY_AVAILABLE[14],
       },
+      {
+        ...MOCK_PRODUCT_VARIANTS[15],
+        size: MOCK_SIZES[3],
+        color: MOCK_COLORS[3],
+        material: MOCK_MATERIALS[1],
+        inventory: MOCK_INVENTORY_AVAILABLE[15],
+      },
     ],
-    images: [MOCK_PRODUCT_IMAGES[7], MOCK_PRODUCT_IMAGES[8], MOCK_PRODUCT_IMAGES[9]],
+    images: MOCK_PRODUCT_IMAGES.filter((img) => img.product_id === 2),
   },
 ];
 
@@ -523,22 +501,22 @@ export const MOCK_ORDER_ITEMS: OrderItem[] = [
   {
     id: 2,
     order_id: 2,
-    variant_id: 21,
-    product_name: 'Quần jean slim Denim',
-    variant_label: 'Size 30 / Xanh / Denim (SKU: QJ01-XANH-30)',
-    unit_price: 450000,
+    variant_id: 201,
+    product_name: 'Nam Áo Khoác Giả Lông Cừu Cản Gió (Kéo Khóa)',
+    variant_label: 'Size S / Navy / Lông cừu (SKU: AKM-486116-69-S)',
+    unit_price: 899000,
     quantity: 1,
-    line_total: 450000,
+    line_total: 899000,
   },
   {
     id: 3,
     order_id: 3,
-    variant_id: 11,
-    product_name: 'Áo thun basic Cotton',
-    variant_label: 'Size M / Đen / Cotton (SKU: AT01-DEN-M)',
-    unit_price: 199000,
+    variant_id: 102,
+    product_name: 'Nữ Áo Kiểu Vải Rayon Cổ Mở - Tay Lửng 3/4',
+    variant_label: 'Size M / Trắng / Rayon (SKU: AKN-479073-00-M)',
+    unit_price: 599000,
     quantity: 1,
-    line_total: 199000,
+    line_total: 599000,
   },
   {
     id: 4,
@@ -627,10 +605,8 @@ export function formatVND(amount: number): string {
 /** Tương thích ngược với ProductListPage và dbStore */
 export const CATEGORIES = [
   { id: 'all', name: 'TẤT CẢ', slug: 'all' },
-  { id: 'nu', name: 'NỮ', slug: 'nu' },
-  { id: 'nam', name: 'NAM', slug: 'nam' },
-  { id: 'ao-thun', name: 'ÁO THUN', slug: 'ao-thun' },
-  { id: 'quan-jean', name: 'QUẦN JEAN', slug: 'quan-jean' },
+  { id: 'nu', name: 'ÁO NỮ', slug: 'ao-nu' },
+  { id: 'nam', name: 'ÁO NAM', slug: 'ao-nam' },
 ];
 
 /** Tương thích ngược với COUPONS trong cartStore.js */
@@ -669,7 +645,7 @@ export const PRODUCTS = [
   {
     id: 1,
     category_id: 'nu',
-    category_name: 'Thời Trang Nữ',
+    category_name: 'Áo Nữ',
     code: '479073',
     name: 'Nữ Áo Kiểu Vải Rayon Cổ Mở - Tay Lửng 3/4',
     slug: 'nu-ao-kieu-vai-rayon-co-mo-tay-lung',
@@ -714,7 +690,7 @@ export const PRODUCTS = [
   {
     id: 2,
     category_id: 'nam',
-    category_name: 'Thời Trang Nam',
+    category_name: 'Áo Nam',
     code: '486116',
     name: 'Nam Áo Khoác Giả Lông Cừu Cản Gió (Kéo Khóa)',
     slug: 'nam-ao-khoac-gia-long-cuu-can-gio',
@@ -751,75 +727,6 @@ export const PRODUCTS = [
       { id: 204, sku: 'AKM-486116-69-XL', color: '69 NAVY', color_code: '#1e293b', size: 'XL', stock: 12 },
       { id: 205, sku: 'AKM-486116-09-M', color: '09 BLACK', color_code: '#000000', size: 'M', stock: 30 },
       { id: 206, sku: 'AKM-486116-09-L', color: '09 BLACK', color_code: '#000000', size: 'L', stock: 18 },
-    ],
-  },
-  {
-    id: 3,
-    category_id: 'nam',
-    category_name: 'Thời Trang Nam',
-    code: 'AT01',
-    name: 'Áo thun basic Cotton',
-    slug: 'ao-thun-basic',
-    price: 199000,
-    cost_price: 90000,
-    rating: 4.8,
-    reviews_count: 18,
-    is_active: true,
-    is_featured: false,
-    badge: 'CƠ BẢN',
-    collection: 'Everyday Essentials',
-    short_desc: 'Áo thun basic Cotton 100% thoáng mát, co giãn nhẹ nhàng.',
-    details: [
-      'Chất liệu 100% Cotton thoáng mát, thấm hút mồ hôi tốt.',
-      'Đường chỉ may 2 kim chắc chắn, giặt không bai nhão.',
-      'Sản xuất theo tiêu chuẩn PostgreSQL demo seed.',
-    ],
-    material: '100% Cotton.',
-    care_instructions: 'Giặt máy thông thường, không ủi trực tiếp lên hình in.',
-    shipping_info: 'Phí giao hàng: 30,000 VND; Miễn phí từ 500,000 VND.',
-    return_policy: 'Đổi trả trực tuyến trong vòng 7 ngày.',
-    images: [
-      '/images/products/nam_demo/san_pham1/vngoods_69_486116_3x4.avif',
-      '/images/products/nu_demo/san_pham1/vngoods_00_479073_3x4.avif',
-    ],
-    video: null,
-    variants: [
-      { id: 11, sku: 'AT01-DEN-M', color: 'Đen', color_code: '#000000', size: 'M', stock: 50 },
-      { id: 12, sku: 'AT01-DEN-L', color: 'Đen', color_code: '#000000', size: 'L', stock: 38 },
-      { id: 13, sku: 'AT01-TRANG-M', color: 'Trắng', color_code: '#FFFFFF', border: true, size: 'M', stock: 30 },
-    ],
-  },
-  {
-    id: 4,
-    category_id: 'nam',
-    category_name: 'Thời Trang Nam',
-    code: 'QJ01',
-    name: 'Quần jean slim Denim',
-    slug: 'quan-jean-slim',
-    price: 450000,
-    cost_price: 220000,
-    rating: 4.7,
-    reviews_count: 24,
-    is_active: true,
-    is_featured: false,
-    badge: 'CƠ BẢN',
-    collection: 'Denim Collection',
-    short_desc: 'Quần jean slim phom dáng ôm vừa vặn, màu xanh denim nguyên bản.',
-    details: [
-      'Chất liệu Denim dày dặn, độ bền cao.',
-      'Phom dáng slim fit tôn dáng người mặc.',
-      'Khóa kéo kim loại và khuy đồng chống gỉ sét.',
-    ],
-    material: '100% Denim Cotton.',
-    care_instructions: 'Giặt riêng lần đầu, lộn trái khi phơi.',
-    shipping_info: 'Phí giao hàng: 30,000 VND; Miễn phí từ 500,000 VND.',
-    return_policy: 'Đổi trả trực tuyến trong vòng 7 ngày.',
-    images: [
-      '/images/products/nam_demo/san_pham1/vngoods_486116_sub3_3x4.avif',
-    ],
-    video: null,
-    variants: [
-      { id: 21, sku: 'QJ01-XANH-30', color: 'Xanh', color_code: '#1F3A93', size: '30', stock: 19 },
     ],
   },
 ];

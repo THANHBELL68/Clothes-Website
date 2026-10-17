@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingBag, X, Menu, ArrowRight, User, Lock, Heart, Sparkles, LogOut } from 'lucide-react';
+import { Search, ShoppingBag, X, Menu, ArrowRight, User, Heart, Sparkles, LogOut, Sun, Moon } from 'lucide-react';
 import { MOCK_CATEGORIES } from '../data/mockData';
+import { useThemeStore } from '../store/themeStore';
 
 export default function AetherNavbar({
   categories = MOCK_CATEGORIES,
@@ -16,6 +17,7 @@ export default function AetherNavbar({
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const { theme, toggleTheme } = useThemeStore();
 
   // Đọc dữ liệu user đăng nhập từ localStorage (users.loyalty_points)
   useEffect(() => {
@@ -30,8 +32,9 @@ export default function AetherNavbar({
   }, []);
 
   // Lọc danh mục is_active = true và sắp xếp theo sort_order theo đúng Schema DB
-  const activeCategories = [...categories]
-    .filter((c) => c.is_active !== false)
+  const safeCategories = Array.isArray(categories) ? categories : (MOCK_CATEGORIES || []);
+  const activeCategories = [...safeCategories]
+    .filter((c) => c && c.is_active !== false)
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
   const handleNavClick = (cat) => {
@@ -96,7 +99,7 @@ export default function AetherNavbar({
                 AETHER LABS
               </span>
               <span className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase -mt-0.5 hidden sm:block">
-                TECHWEAR STUDIO
+                XƯỞNG THỜI TRANG KỸ THUẬT
               </span>
             </div>
           </button>
@@ -109,7 +112,7 @@ export default function AetherNavbar({
                 !activeCategory ? 'text-white' : 'text-[#a1a1aa] hover:text-[#fafafa]'
               }`}
             >
-              <span>ALL DROPS</span>
+              <span>TẤT CẢ SẢN PHẨM</span>
               <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-white transition-all duration-200 group-hover:w-full" />
             </button>
 
@@ -176,7 +179,7 @@ export default function AetherNavbar({
             title="Sản phẩm yêu thích"
           >
             <Heart className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="hidden lg:inline">WISHLIST</span>
+            <span className="hidden lg:inline">YÊU THÍCH</span>
             <span className="text-zinc-500">({wishlistCount})</span>
           </Link>
 
@@ -212,23 +215,26 @@ export default function AetherNavbar({
             </Link>
           )}
 
-          {/* Phân quyền 2: Cổng Nội bộ (Thủ kho, CSKH, Admin) */}
-          <Link
-            to="/staff/login"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 border border-amber-600/40 hover:border-amber-500 bg-amber-950/20 text-amber-300 hover:text-amber-200 font-mono text-[11px] tracking-widest uppercase transition-all"
-            title="Cổng đăng nhập nhân sự nội bộ"
+          {/* Nút chuyển đổi Giao diện Sáng / Tối */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-8 h-8 border border-zinc-800 hover:border-zinc-500 bg-zinc-900/40 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+            title={theme === 'dark' ? 'Chuyển sang Giao diện Sáng' : 'Chuyển sang Giao diện Tối'}
           >
-            <Lock className="w-3 h-3 text-amber-400" />
-            <span className="hidden xl:inline">NỘI BỘ</span>
-          </Link>
+            {theme === 'dark' ? (
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+            ) : (
+              <Moon className="w-3.5 h-3.5 text-blue-400" />
+            )}
+          </button>
 
           {/* Nút Cart Drawer Nổi Bật Nền Trắng Chữ Đen theo chuẩn ArtCraft */}
           <button
             onClick={onOpenCart}
-            className="flex items-center gap-2 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 px-3.5 py-2 font-mono text-[11px] font-bold tracking-widest uppercase transition-all shadow-sm active:translate-y-0.5 cursor-pointer ml-1"
+            className="flex items-center gap-2 navbar-cart-btn px-3.5 py-2 font-mono text-[11px] font-bold tracking-widest uppercase transition-all shadow-sm active:translate-y-0.5 cursor-pointer ml-1"
           >
             <ShoppingBag className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>CART ({String(cartCount).padStart(2, '0')})</span>
+            <span>GIỎ HÀNG ({String(cartCount).padStart(2, '0')})</span>
           </button>
 
           {/* Mobile Menu Toggle */}
@@ -251,7 +257,7 @@ export default function AetherNavbar({
               onClick={() => handleSectionClick('catalog')}
               className="flex items-center justify-between py-2.5 px-3 border-b border-zinc-900 font-mono text-[11px] tracking-widest text-[#a1a1aa] hover:text-white hover:bg-zinc-900/40 text-left transition-colors"
             >
-              <span>ALL DROPS (TẤT CẢ)</span>
+              <span>TẤT CẢ SẢN PHẨM</span>
               <ArrowRight className="w-3 h-3 text-zinc-600" />
             </button>
 
@@ -302,14 +308,16 @@ export default function AetherNavbar({
               <span>KHÁCH HÀNG</span>
             </Link>
 
-            <Link
-              to="/staff/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-center gap-1.5 py-2.5 border border-amber-600/40 bg-amber-950/20 font-mono text-[11px] tracking-widest text-amber-300 hover:text-amber-200 text-center"
+            <button
+              onClick={() => {
+                toggleTheme();
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center justify-center gap-1.5 py-2.5 border border-zinc-800 font-mono text-[11px] tracking-widest text-zinc-300 hover:text-white text-center cursor-pointer"
             >
-              <Lock className="w-3 h-3 text-amber-400" />
-              <span>CỔNG NỘI BỘ</span>
-            </Link>
+              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-blue-400" />}
+              <span>{theme === 'dark' ? 'GIAO DIỆN SÁNG' : 'GIAO DIỆN TỐI'}</span>
+            </button>
           </div>
 
           <div className="pt-2">

@@ -128,25 +128,38 @@ export default function OrdersPage() {
     return [...formattedStoreOrders, ...MOCK_ORDER_DETAILS];
   }, [storeOrders, user]);
 
-  // Xử lý tra cứu đơn hàng theo cặp (order_code, customer_phone)
-  const handleTrackOrder = (e) => {
-    if (e) e.preventDefault();
-    const code = trackingForm.order_code.trim().toUpperCase();
-    const phone = trackingForm.customer_phone.trim();
+  // Xử lý tra cứu đơn hàng linh hoạt theo mã đơn hoặc số điện thoại
+  const performSearch = (targetCode, targetPhone) => {
+    const code = (targetCode !== undefined ? targetCode : trackingForm.order_code).trim().toUpperCase();
+    const phone = (targetPhone !== undefined ? targetPhone : trackingForm.customer_phone).trim().replace(/[\s\-\.]/g, '');
 
-    if (!code || !phone) {
-      toast.error('Vui lòng nhập cả Mã đơn hàng và Số điện thoại!');
+    if (!code && !phone) {
+      toast.error('Vui lòng nhập Mã đơn hàng hoặc Số điện thoại để tra cứu!');
       return;
     }
 
     setSearchAttempted(true);
 
     const found = allOrdersList.find((ord) => {
-      const matchCode = ord.order_code.toUpperCase() === code;
-      const matchPhone =
-        ord.customer_phone?.replace(/\s+/g, '') === phone.replace(/\s+/g, '') ||
-        ord.recipient_phone?.replace(/\s+/g, '') === phone.replace(/\s+/g, '');
-      return matchCode && matchPhone;
+      const ordCode = (ord.order_code || ord.code || '').toUpperCase();
+      const ordPhone1 = (ord.customer_phone || '').replace(/[\s\-\.]/g, '');
+      const ordPhone2 = (ord.recipient_phone || '').replace(/[\s\-\.]/g, '');
+
+      // Nếu có cả 2: khớp mã đơn và khớp số điện thoại
+      if (code && phone) {
+        const matchCode = ordCode === code || ordCode.endsWith(code) || code.endsWith(ordCode);
+        const matchPhone = ordPhone1 === phone || ordPhone2 === phone || ordPhone1.endsWith(phone) || phone.endsWith(ordPhone1);
+        return matchCode && matchPhone;
+      }
+      // Nếu chỉ có mã đơn
+      if (code) {
+        return ordCode === code || ordCode.endsWith(code);
+      }
+      // Nếu chỉ có số điện thoại
+      if (phone) {
+        return ordPhone1 === phone || ordPhone2 === phone || ordPhone1.endsWith(phone);
+      }
+      return false;
     });
 
     if (found) {
@@ -154,14 +167,19 @@ export default function OrdersPage() {
       toast.success(`Đã tìm thấy đơn hàng [${found.order_code}]!`);
     } else {
       setTrackedOrder(null);
-      toast.error('Không tìm thấy đơn hàng nào khớp với mã đơn và số điện thoại trên!');
+      toast.error('Không tìm thấy đơn hàng nào khớp với thông tin đã nhập!');
     }
   };
 
-  // Tự động tìm kiếm nếu có query params ban đầu
+  const handleTrackOrder = (e) => {
+    if (e) e.preventDefault();
+    performSearch();
+  };
+
+  // Tự động tìm kiếm ngay khi có query params từ Checkout hoặc URL
   useEffect(() => {
-    if (initialCode && initialPhone) {
-      handleTrackOrder();
+    if (initialCode || initialPhone) {
+      performSearch(initialCode, initialPhone);
     }
   }, [initialCode, initialPhone]);
 
@@ -217,7 +235,7 @@ export default function OrdersPage() {
 
     setCancelModal({ open: false, order: null });
     setCustomReason('');
-    toast.success(`[ĐÃ HỦY ĐƠN ${order.order_code}] Đã ghi nhận lý do vào bảng order_cancellations!`);
+    toast.success(`Đã hủy thành công đơn hàng [${order.order_code}]!`);
 
     // Cập nhật lại trackedOrder nếu đang tra cứu
     if (trackedOrder && trackedOrder.order_id === order.order_id) {
@@ -298,7 +316,7 @@ export default function OrdersPage() {
 
     setReturnModal({ open: false, order: null });
     toast.success(
-      `Đã gửi yêu cầu ${returnForm.type === 'exchange' ? 'đổi hàng' : 'hoàn tiền'} vào bảng return_requests!`,
+      `Đã gửi yêu cầu ${returnForm.type === 'exchange' ? 'đổi hàng' : 'hoàn tiền'} thành công. Nhân viên CSKH sẽ xử lý trong 24h!`,
       { duration: 5000 }
     );
   };
@@ -322,7 +340,7 @@ export default function OrdersPage() {
   };
 
   // =========================================================================
-  // MODAL ĐÁNH GIÁ SẢN PHẨM (reviews & review_media)
+  // MODAL ĐÁNH GIÁ SẢN PHẨM
   // =========================================================================
   const [reviewModal, setReviewModal] = useState({ open: false, order: null, item: null });
   const [reviewForm, setReviewForm] = useState({
@@ -339,7 +357,7 @@ export default function OrdersPage() {
     });
 
     setReviewModal({ open: false, order: null, item: null });
-    toast.success('Đã gửi đánh giá vào bảng reviews (trạng thái pending chờ CSKH duyệt)!');
+    toast.success('Đã gửi đánh giá sản phẩm thành công! Cảm ơn bạn.');
   };
 
   return (
@@ -359,7 +377,7 @@ export default function OrdersPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase block">
-              ORDER MANAGEMENT // VIEW v_order_details & 5-STAGE PIPELINE
+              ORDER MANAGEMENT // THEO DÕI ĐƠN HÀNG
             </span>
             <h1 className="font-inter font-black text-2xl sm:text-3xl text-white tracking-tight mt-1">
               Theo Dõi & Quản Lý Đơn Hàng
@@ -416,7 +434,7 @@ export default function OrdersPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-zinc-400 text-[10px] uppercase">
-                      MÃ ĐƠN HÀNG (order_code)
+                      MÃ ĐƠN HÀNG
                     </label>
                     <input
                       type="text"
@@ -431,7 +449,7 @@ export default function OrdersPage() {
 
                   <div className="space-y-1">
                     <label className="text-zinc-400 text-[10px] uppercase">
-                      SỐ ĐIỆN THOẠI (customer_phone)
+                      SỐ ĐIỆN THOẠI ĐẶT HÀNG
                     </label>
                     <input
                       type="tel"
@@ -535,7 +553,7 @@ export default function OrdersPage() {
             </div>
 
             <div className="text-xs text-zinc-400 leading-relaxed">
-              Theo quy định CSDL, thao tác hủy sẽ <strong>thêm một bản ghi vào bảng order_cancellations</strong>, trigger hệ thống sẽ tự động chuyển trạng thái đơn sang 'cancelled'.
+              Bạn có chắc chắn muốn hủy đơn hàng này không? Sau khi xác nhận, đơn hàng sẽ được hủy và hoàn tiền lại theo quy định nếu đã thanh toán.
             </div>
 
             <div className="space-y-2 text-xs">
@@ -702,26 +720,26 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            {/* Lý do đổi trả return_reason */}
+            {/* Lý do đổi trả */}
             <div className="space-y-1 text-xs">
-              <label className="text-[10px] text-zinc-400 uppercase">LÝ DO (return_reason) (*)</label>
+              <label className="text-[10px] text-zinc-400 uppercase">LÝ DO YÊU CẦU (*)</label>
               <select
                 value={returnForm.reason}
                 onChange={(e) => setReturnForm({ ...returnForm, reason: e.target.value })}
                 className="w-full bg-zinc-950 border border-zinc-800 p-2.5 text-white text-xs focus:outline-none focus:border-white"
               >
-                <option value="wrong_size">Mặc không vừa size (wrong_size)</option>
-                <option value="defective">Sản phẩm bị lỗi / chỉ thừa / lỗi vải (defective)</option>
-                <option value="changed_mind">Đổi ý / Không ưng phom dáng (changed_mind)</option>
-                <option value="other">Lý do khác (other)</option>
+                <option value="wrong_size">Mặc không vừa kích cỡ</option>
+                <option value="defective">Sản phẩm bị lỗi sản xuất / lỗi vải</option>
+                <option value="changed_mind">Đổi ý / Không ưng ý phom dáng</option>
+                <option value="other">Lý do khác</option>
               </select>
             </div>
 
-            {/* NẾU LÀ ĐỔI HÀNG: Dropdown chọn biến thể mới exchange_variant_id */}
+            {/* NẾU LÀ ĐỔI HÀNG: Dropdown chọn biến thể mới */}
             {returnForm.type === 'exchange' && (
               <div className="space-y-1 text-xs p-3 border border-zinc-800 bg-zinc-950">
                 <label className="text-[10px] text-amber-300 uppercase block font-bold">
-                  CHỌN BIẾN THỂ MỚI MUỐN ĐỔI (exchange_variant_id) (*):
+                  CHỌN SẢN PHẨM / BIẾN THỂ MỚI MUỐN ĐỔI (*):
                 </label>
                 <select
                   value={returnForm.exchange_variant_id}
@@ -730,24 +748,26 @@ export default function OrdersPage() {
                   }
                   className="w-full bg-black border border-zinc-700 p-2 text-white text-xs"
                 >
-                  <option value="AT01-TRANG-M">Áo thun basic Cotton - Size M / Trắng (SKU: AT01-TRANG-M)</option>
-                  <option value="AT01-DEN-L">Áo thun basic Cotton - Size L / Đen (SKU: AT01-DEN-L)</option>
-                  <option value="AKN-479073-10-M">Áo kiểu Rayon - Size M / 10 Beige (SKU: AKN-479073-10-M)</option>
-                  <option value="AKM-486116-69-L">Áo khoác lông cừu - Size L / 69 Navy (SKU: AKM-486116-69-L)</option>
+                  <option value="AKN-479073-00-S">Nữ Áo Kiểu Rayon - Size S / Trắng (SKU: AKN-479073-00-S)</option>
+                  <option value="AKN-479073-00-M">Nữ Áo Kiểu Rayon - Size M / Trắng (SKU: AKN-479073-00-M)</option>
+                  <option value="AKN-479073-10-M">Nữ Áo Kiểu Rayon - Size M / Beige (SKU: AKN-479073-10-M)</option>
+                  <option value="AKM-486116-69-M">Nam Áo Khoác Lông Cừu - Size M / Navy (SKU: AKM-486116-69-M)</option>
+                  <option value="AKM-486116-69-L">Nam Áo Khoác Lông Cừu - Size L / Navy (SKU: AKM-486116-69-L)</option>
+                  <option value="AKM-486116-09-L">Nam Áo Khoác Lông Cừu - Size L / Đen (SKU: AKM-486116-09-L)</option>
                 </select>
               </div>
             )}
 
-            {/* NẾU LÀ HOÀN TIỀN: Form tài khoản ngân hàng (refunds) */}
+            {/* NẾU LÀ HOÀN TIỀN: Form tài khoản ngân hàng */}
             {returnForm.type === 'refund' && (
               <div className="space-y-3 p-3 border border-zinc-800 bg-zinc-950 text-xs">
                 <span className="text-[10px] text-amber-300 uppercase block font-bold">
-                  THÔNG TIN TÀI KHOẢN NHẬN HOÀN TIỀN (bảng refunds):
+                  THÔNG TIN TÀI KHOẢN NHẬN HOÀN TIỀN:
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] text-zinc-400">NGÂN HÀNG (bank_name)</label>
+                    <label className="text-[10px] text-zinc-400">TÊN NGÂN HÀNG</label>
                     <input
                       type="text"
                       value={returnForm.bank_name}
@@ -757,7 +777,7 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] text-zinc-400">SỐ TÀI KHOẢN (bank_account_no) (*)</label>
+                    <label className="text-[10px] text-zinc-400">SỐ TÀI KHOẢN (*)</label>
                     <input
                       type="text"
                       placeholder="Số tài khoản..."
@@ -771,7 +791,7 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-400">TÊN CHỦ TÀI KHOẢN (bank_account_name) (*)</label>
+                  <label className="text-[10px] text-zinc-400">TÊN CHỦ TÀI KHOẢN (*)</label>
                   <input
                     type="text"
                     placeholder="NGUYEN VAN A..."
@@ -785,9 +805,9 @@ export default function OrdersPage() {
               </div>
             )}
 
-            {/* Mô tả chi tiết & Đính kèm ảnh (return_request_media) */}
+            {/* Mô tả chi tiết & Đính kèm ảnh */}
             <div className="space-y-1 text-xs">
-              <label className="text-[10px] text-zinc-400 uppercase">MÔ TẢ TÌNH TRẠNG (description)</label>
+              <label className="text-[10px] text-zinc-400 uppercase">MÔ TẢ CHI TIẾT TÌNH TRẠNG</label>
               <textarea
                 placeholder="Mô tả cụ thể lý do đổi hoặc lỗi của sản phẩm..."
                 value={returnForm.description}
@@ -798,7 +818,7 @@ export default function OrdersPage() {
             </div>
 
             <div className="space-y-1 text-xs">
-              <label className="text-[10px] text-zinc-400 uppercase">ĐÍNH KÈM ẢNH/VIDEO LỖI (return_request_media)</label>
+              <label className="text-[10px] text-zinc-400 uppercase">ĐÍNH KÈM ẢNH/VIDEO MINH CHỨNG</label>
               <input
                 type="text"
                 placeholder="Dán link ảnh hoặc tải lên minh chứng..."
@@ -880,7 +900,7 @@ export default function OrdersPage() {
 
             {/* Nội dung nhận xét */}
             <div className="space-y-1 text-xs">
-              <label className="text-[10px] text-zinc-400 uppercase">NHẬN XÉT (content) (*)</label>
+              <label className="text-[10px] text-zinc-400 uppercase">NHẬN XÉT CỦA BẠN (*)</label>
               <textarea
                 rows={3}
                 placeholder="Chia sẻ cảm nhận về chất vải, độ cản gió, phom dáng..."
@@ -891,7 +911,7 @@ export default function OrdersPage() {
             </div>
 
             <div className="p-2 border border-zinc-900 bg-zinc-950 text-[10px] text-zinc-500">
-              * Theo trigger CSDL, đánh giá sẽ được ghi nhận ở trạng thái 'pending' và sẽ xuất hiện công khai sau khi CSKH kiểm duyệt.
+              * Đánh giá của bạn sẽ được kiểm duyệt và hiển thị công khai trên trang sản phẩm.
             </div>
 
             <button
@@ -1036,7 +1056,7 @@ function OrderCard({ order, onOpenCancel, onOpenReturn, onOpenReview }) {
           <div>
             <div className="font-bold">ĐƠN HÀNG ĐÃ ĐƯỢC HỦY</div>
             <div className="text-[11px] text-zinc-400">
-              LÝ DO (order_cancellations): {order.cancel_reason || 'Khách hàng thay đổi ý định'}
+              LÝ DO HỦY: {order.cancel_reason || 'Khách hàng thay đổi ý định'}
             </div>
           </div>
         </div>
@@ -1046,7 +1066,7 @@ function OrderCard({ order, onOpenCancel, onOpenReturn, onOpenReview }) {
       <div className="p-4 sm:p-5 border-b border-zinc-800 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-zinc-400">
         <div>
           <span className="text-[10px] text-zinc-500 uppercase block mb-1">
-            NGƯỜI NHẬN & ĐỊA CHỈ (order_shipping_addresses):
+            NGƯỜI NHẬN & ĐỊA CHỈ GIAO HÀNG:
           </span>
           <div className="text-white font-bold">{order.recipient_name} - {order.recipient_phone}</div>
           <div className="text-[11px] leading-relaxed mt-0.5">
@@ -1056,7 +1076,7 @@ function OrderCard({ order, onOpenCancel, onOpenReturn, onOpenReview }) {
 
         <div className="sm:text-right space-y-1">
           <span className="text-[10px] text-zinc-500 uppercase block mb-1">
-            TIỀN & THANH TOÁN (order_amounts):
+            CHI TIẾT THANH TOÁN:
           </span>
           <div>TIỀN HÀNG: {formatVND(order.subtotal)}</div>
           {order.voucher_discount > 0 && (

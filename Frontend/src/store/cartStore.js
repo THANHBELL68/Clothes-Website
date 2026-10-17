@@ -11,16 +11,18 @@ export const useCartStore = create(
 
       // Thêm sản phẩm vào giỏ
       addToCart: (item) => {
+        if (!item) return;
         set((state) => {
-          const existingIndex = state.items.findIndex(
+          const currentItems = Array.isArray(state.items) ? state.items : [];
+          const existingIndex = currentItems.findIndex(
             (i) => i.variant_id === item.variant_id
           );
 
           if (existingIndex > -1) {
-            const updatedItems = [...state.items];
+            const updatedItems = [...currentItems];
             const currentItem = updatedItems[existingIndex];
             const newQty = Math.min(
-              currentItem.quantity + (item.quantity || 1),
+              (currentItem.quantity || 1) + (item.quantity || 1),
               item.stock || 99
             );
             updatedItems[existingIndex] = {
@@ -31,7 +33,7 @@ export const useCartStore = create(
           }
 
           return {
-            items: [...state.items, { ...item, quantity: item.quantity || 1 }],
+            items: [...currentItems, { ...item, quantity: item.quantity || 1 }],
           };
         });
       },
@@ -41,19 +43,25 @@ export const useCartStore = create(
           get().removeFromCart(variant_id);
           return;
         }
-        set((state) => ({
-          items: state.items.map((item) =>
-            item.variant_id === variant_id
-              ? { ...item, quantity: Math.min(qty, item.stock || 99) }
-              : item
-          ),
-        }));
+        set((state) => {
+          const currentItems = Array.isArray(state.items) ? state.items : [];
+          return {
+            items: currentItems.map((item) =>
+              item.variant_id === variant_id
+                ? { ...item, quantity: Math.min(qty, item.stock || 99) }
+                : item
+            ),
+          };
+        });
       },
 
       removeFromCart: (variant_id) => {
-        set((state) => ({
-          items: state.items.filter((item) => item.variant_id !== variant_id),
-        }));
+        set((state) => {
+          const currentItems = Array.isArray(state.items) ? state.items : [];
+          return {
+            items: currentItems.filter((item) => item.variant_id !== variant_id),
+          };
+        });
       },
 
       clearCart: () => {
@@ -63,7 +71,7 @@ export const useCartStore = create(
       // Áp dụng mã coupon
       applyCoupon: (code) => {
         const found = COUPONS.find(
-          (c) => c.code.toUpperCase() === code.trim().toUpperCase()
+          (c) => c.code.toUpperCase() === (code || '').trim().toUpperCase()
         );
         if (!found) {
           return { success: false, message: 'Mã giảm giá không tồn tại!' };
@@ -90,8 +98,9 @@ export const useCartStore = create(
 
       // Tính tổng tiền theo đúng công thức trong CSDL PostgreSQL
       getSubtotal: () => {
-        return get().items.reduce(
-          (sum, item) => sum + item.price * item.quantity,
+        const items = Array.isArray(get().items) ? get().items : [];
+        return items.reduce(
+          (sum, item) => sum + (Number(item?.price) || 0) * (Number(item?.quantity) || 1),
           0
         );
       },
@@ -110,18 +119,18 @@ export const useCartStore = create(
 
         let discount = 0;
         if (coupon.discount_type === 'percent') {
-          discount = Math.round((subtotal * coupon.discount_value) / 100);
+          discount = Math.round((subtotal * (coupon.discount_value || 0)) / 100);
           if (coupon.max_discount) {
             discount = Math.min(discount, coupon.max_discount);
           }
         } else {
-          discount = coupon.discount_value;
+          discount = coupon.discount_value || 0;
         }
         return Math.min(discount, subtotal);
       },
 
       getPointsDiscount: () => {
-        const points = get().pointsUsed;
+        const points = get().pointsUsed || 0;
         // 1 điểm = 1.000 VND
         return points * 1000;
       },
@@ -136,8 +145,17 @@ export const useCartStore = create(
       },
     }),
     {
-      name: 'shop-cart-storage',
+      name: 'shop-cart-storage-v2',
+      migrate: (persistedState) => {
+        if (!persistedState || !Array.isArray(persistedState.items)) {
+          return {
+            items: Array.isArray(persistedState?.cart) ? persistedState.cart : [],
+            coupon: null,
+            pointsUsed: 0,
+          };
+        }
+        return persistedState;
+      },
     }
   )
 );
-

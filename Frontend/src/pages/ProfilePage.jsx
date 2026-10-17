@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { User, Award, MapPin, Mail, Phone, Plus, Trash2 } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, Award, MapPin, Mail, Phone, Plus, Trash2, Sparkles, Package, Heart, LogOut, Check } from 'lucide-react';
+import { useAuthStore, normalizeRoleCode } from '../store/authStore';
 import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
-  const { user, addresses, addAddress, setDefaultAddress } = useAuthStore();
-  const [showAdd, setShowAdd] = useState(false);
+  const navigate = useNavigate();
+  const { user, addresses, addAddress, setDefaultAddress, logout } = useAuthStore();
+  const [showAddModal, setShowAddModal] = useState(false);
   const [newAddr, setNewAddr] = useState({
     receiver_name: user?.full_name || '',
     phone: user?.phone || '',
@@ -16,215 +18,238 @@ export default function ProfilePage() {
     is_default: false,
   });
 
-  const handleAdd = (e) => {
+  const handleAddSubmit = (e) => {
     e.preventDefault();
-    if (!newAddr.street.trim()) return;
+    if (!newAddr.street.trim()) {
+      toast.error('Vui lòng nhập địa chỉ cụ thể!');
+      return;
+    }
     addAddress(newAddr);
-    setShowAdd(false);
-    toast.success('Đã thêm địa chỉ mới!');
+    setShowAddModal(false);
+    toast.success('Đã thêm địa chỉ giao hàng mới!', {
+      style: {
+        background: '#080808',
+        color: '#fafafa',
+        border: '1px solid #27272a',
+        fontFamily: 'JetBrains Mono',
+        fontSize: '11px',
+      },
+    });
   };
 
-  return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="border-b border-neutral-200/80 pb-4">
-        <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Hồ Sơ Khách Hàng</h1>
-        <p className="text-xs text-neutral-500 mt-1">
-          Quản lý thông tin cá nhân, điểm thưởng loyalty và sổ địa chỉ giao hàng
-        </p>
-      </div>
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Card Thông tin khách hàng góc cạnh Liquid Glass */}
-        <div className="bg-white/95 liquid-glass p-6 rounded-sm border border-neutral-200/80 shadow-xs space-y-4">
-          <div className="w-16 h-16 bg-neutral-900 text-amber-400 rounded-sm flex items-center justify-center font-black text-2xl mx-auto shadow-md">
-            {user?.full_name?.charAt(0) || 'K'}
-          </div>
-          <div className="text-center">
-            <h3 className="font-bold text-neutral-900 text-base">{user?.full_name}</h3>
-            <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-xs mt-1 inline-block">
-              {user?.role}
+  const roleNormalized = normalizeRoleCode(user?.role);
+
+  return (
+    <div className="space-y-8 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
+      
+      {/* Header Technical */}
+      <div className="border-b border-zinc-800 pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+              MEMBER // 01
             </span>
           </div>
-
-          <div className="border-t border-neutral-200/60 pt-3 space-y-2 text-xs text-neutral-600">
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-neutral-400" />
-              <span>{user?.email}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-neutral-400" />
-              <span>{user?.phone || 'Chưa cập nhật SĐT'}</span>
-            </div>
-          </div>
+          <h1 className="font-inter font-black text-2xl sm:text-3xl text-white tracking-tight uppercase">
+            HỒ SƠ THÀNH VIÊN
+          </h1>
+          <p className="font-mono text-xs text-zinc-400">
+            Quản lý thông tin tài khoản, điểm tích lũy Loyalty và sổ địa chỉ nhận hàng.
+          </p>
         </div>
 
-        {/* Card Điểm thưởng Loyalty */}
-        <div className="md:col-span-2 liquid-glass-dark text-white p-6 rounded-sm shadow-xl flex flex-col justify-between border border-white/10">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1.5">
-                <Award className="w-4 h-4" /> Clothes Club Rewards
-              </span>
-              <span className="text-xs text-neutral-400">10.000₫ = 1 điểm</span>
-            </div>
-
-            <div className="mt-4">
-              <span className="text-xs text-neutral-400">Điểm khả dụng:</span>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-4xl font-black text-amber-400">{user?.loyalty_points || 0}</span>
-                <span className="text-sm font-semibold text-neutral-300">điểm tích lũy</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-neutral-700/60 pt-4 mt-6 text-xs text-neutral-300 flex items-center justify-between">
-            <span>Giá trị quy đổi giảm giá: <strong>{((user?.loyalty_points || 0) * 1000).toLocaleString('vi-VN')}₫</strong></span>
-            <span className="text-amber-400 font-semibold">Tự động trừ khi thanh toán</span>
-          </div>
-        </div>
-
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 border border-zinc-800 hover:border-rose-900 bg-zinc-950 text-zinc-400 hover:text-rose-400 font-mono text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer transition-colors"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>ĐĂNG XUẤT</span>
+        </button>
       </div>
 
-      {/* Sổ địa chỉ nhận hàng (bảng addresses trong DB) */}
-      <div className="bg-white/95 liquid-glass p-6 rounded-sm border border-neutral-200/80 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-neutral-900 text-base flex items-center gap-2 uppercase tracking-wider">
-            <MapPin className="w-4 h-4 text-amber-600" /> Sổ Địa Chỉ Nhận Hàng ({addresses.length})
-          </h3>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="text-xs font-bold text-amber-600 hover:underline flex items-center gap-1"
-          >
-            <Plus className="w-3.5 h-3.5" /> Thêm địa chỉ mới
-          </button>
+      {/* Grid 3 Khối Thông Tin */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono text-xs">
+        
+        {/* KHỐI 1: THÔNG TIN TÀI KHOẢN */}
+        <div className="bg-[#0c0c0c] border border-zinc-800 p-6 space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 border border-zinc-700 bg-zinc-900 flex items-center justify-center font-bold text-white text-lg">
+              {user?.full_name?.charAt(0) || 'U'}
+            </div>
+            <div>
+              <strong className="text-white font-sans text-base block">{user?.full_name}</strong>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 inline-block mt-0.5">
+                {roleNormalized}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2.5 pt-3 border-t border-zinc-900 text-zinc-400 text-[11px]">
+            <div className="flex items-center gap-2.5">
+              <Mail className="w-3.5 h-3.5 text-zinc-500" />
+              <span className="text-zinc-200">{user?.email}</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Phone className="w-3.5 h-3.5 text-zinc-500" />
+              <span className="text-zinc-200">{user?.phone || 'Chưa cập nhật SĐT'}</span>
+            </div>
+          </div>
+
+          {/* Shortcuts */}
+          <div className="pt-3 border-t border-zinc-900 space-y-2">
+            <Link
+              to="/orders"
+              className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white flex items-center justify-between transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <Package className="w-3.5 h-3.5 text-emerald-400" />
+                <span>ĐƠN HÀNG CỦA TÔI</span>
+              </span>
+              <span>&rarr;</span>
+            </Link>
+
+            <Link
+              to="/wishlist"
+              className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white flex items-center justify-between transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <Heart className="w-3.5 h-3.5 text-rose-400" />
+                <span>SẢN PHẨM YÊU THÍCH</span>
+              </span>
+              <span>&rarr;</span>
+            </Link>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {addresses.map((addr) => (
-            <div
-              key={addr.id}
-              className={`p-4 rounded-sm border-2 text-xs space-y-2 relative ${
-                addr.is_default ? 'border-neutral-900 bg-white shadow-xs' : 'border-neutral-200 bg-white/50'
-              }`}
+        {/* KHỐI 2: ĐIỂM LOYALTY POINTS & TIỆN ÍCH */}
+        <div className="bg-[#0c0c0c] border border-zinc-800 p-6 space-y-5">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+            <span className="text-zinc-400 uppercase tracking-widest text-[10px]">TÍCH LŨY LOYALTY</span>
+            <Sparkles className="w-4 h-4 text-amber-400" />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-3xl font-bold font-inter text-amber-300 block">
+              {user?.loyalty_points || 0} PTS
+            </span>
+            <p className="text-[11px] text-zinc-500">
+              Tương đương giá trị giảm trừ: <strong className="text-white">{((user?.loyalty_points || 0) * 1000).toLocaleString('vi-VN')}₫</strong>
+            </p>
+          </div>
+
+          <div className="p-3 bg-zinc-950 border border-zinc-800 space-y-1.5 text-[10px] text-zinc-400 leading-relaxed">
+            <p className="text-white font-bold uppercase tracking-wider">CHÍNH SÁCH QUY ĐỔI:</p>
+            <p>&bull; Mỗi 10.000₫ thanh toán tích được 1 điểm.</p>
+            <p>&bull; 1 điểm = 1.000₫ trừ thẳng vào tổng tiền tại Checkout.</p>
+            <p>&bull; Điểm không có thời hạn hết hạn.</p>
+          </div>
+        </div>
+
+        {/* KHỐI 3: SỔ ĐỊA CHỈ NHẬN HÀNG (customer_addresses) */}
+        <div className="bg-[#0c0c0c] border border-zinc-800 p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+            <span className="text-zinc-400 uppercase tracking-widest text-[10px]">SỔ ĐỊA CHỈ GIAO HÀNG</span>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="text-[10px] text-white hover:text-amber-400 flex items-center gap-1 cursor-pointer underline"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <strong className="text-neutral-900 text-sm">{addr.receiver_name}</strong>
+              <Plus className="w-3 h-3" /> THÊM MỚI
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {addresses.map((addr) => (
+              <div
+                key={addr.id}
+                className={`p-3.5 border transition-all text-[11px] ${
+                  addr.is_default
+                    ? 'border-emerald-500/80 bg-emerald-950/20'
+                    : 'border-zinc-800 bg-zinc-950/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <strong className="text-white font-sans">{addr.receiver_name}</strong>
                   {addr.is_default && (
-                    <span className="bg-neutral-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-xs">
-                      Mặc định
+                    <span className="px-1.5 py-0.2 bg-emerald-950 text-emerald-400 border border-emerald-800 text-[9px] uppercase font-bold">
+                      MẶC ĐỊNH
                     </span>
                   )}
                 </div>
+                <p className="text-zinc-400 font-mono mt-0.5">{addr.phone}</p>
+                <p className="text-zinc-300 font-sans mt-1">
+                  {addr.street}, {addr.ward}, {addr.district}, {addr.province}
+                </p>
                 {!addr.is_default && (
                   <button
                     onClick={() => setDefaultAddress(addr.id)}
-                    className="text-amber-600 font-bold hover:underline text-[11px]"
+                    className="text-[10px] text-zinc-500 hover:text-white underline mt-2 block cursor-pointer"
                   >
-                    Đặt mặc định
+                    Đặt làm mặc định
                   </button>
                 )}
               </div>
-
-              <p className="text-neutral-500 font-medium">SĐT: {addr.phone}</p>
-              <p className="text-neutral-700 leading-relaxed">
-                {addr.street}, {addr.ward}, {addr.district}, {addr.province}
-              </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
       </div>
 
-      {/* Modal Thêm Địa Chỉ */}
-      {showAdd && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white liquid-glass rounded-sm max-w-md w-full p-6 shadow-2xl space-y-4 border border-neutral-300">
-            <h3 className="font-bold text-neutral-900 text-base">Thêm Địa Chỉ Giao Hàng</h3>
-            
-            <form onSubmit={handleAdd} className="space-y-3 text-xs">
+      {/* Modal Thêm Địa Chỉ Mới */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#121212] border border-zinc-700 max-w-md w-full p-6 space-y-4 font-mono text-xs">
+            <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
+              <h3 className="text-white font-bold uppercase text-sm">THÊM ĐỊA CHỈ NHẬN HÀNG</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-zinc-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleAddSubmit} className="space-y-3">
               <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Họ tên người nhận:</label>
+                <label className="text-zinc-400 text-[10px] uppercase block mb-1">Họ tên người nhận:</label>
                 <input
                   type="text"
                   required
                   value={newAddr.receiver_name}
                   onChange={(e) => setNewAddr({ ...newAddr, receiver_name: e.target.value })}
-                  className="w-full bg-white rounded-sm p-2.5 font-medium border"
+                  className="w-full bg-[#1c1c1c] border border-zinc-800 p-2 text-white font-sans text-xs"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Số điện thoại:</label>
+                <label className="text-zinc-400 text-[10px] uppercase block mb-1">Số điện thoại:</label>
                 <input
-                  type="tel"
+                  type="text"
                   required
                   value={newAddr.phone}
                   onChange={(e) => setNewAddr({ ...newAddr, phone: e.target.value })}
-                  className="w-full bg-white rounded-sm p-2.5 font-medium border"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Tỉnh / Thành:</label>
-                  <input
-                    type="text"
-                    required
-                    value={newAddr.province}
-                    onChange={(e) => setNewAddr({ ...newAddr, province: e.target.value })}
-                    className="w-full bg-white rounded-sm p-2.5 font-medium border"
-                  />
-                </div>
-                <div>
-                  <label className="font-semibold text-neutral-700 block mb-1">Quận / Huyện:</label>
-                  <input
-                    type="text"
-                    required
-                    value={newAddr.district}
-                    onChange={(e) => setNewAddr({ ...newAddr, district: e.target.value })}
-                    className="w-full bg-white rounded-sm p-2.5 font-medium border"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Phường / Xã:</label>
-                <input
-                  type="text"
-                  required
-                  value={newAddr.ward}
-                  onChange={(e) => setNewAddr({ ...newAddr, ward: e.target.value })}
-                  className="w-full bg-white rounded-sm p-2.5 font-medium border"
+                  className="w-full bg-[#1c1c1c] border border-zinc-800 p-2 text-white font-mono text-xs"
                 />
               </div>
 
               <div>
-                <label className="font-semibold text-neutral-700 block mb-1">Số nhà, tên đường:</label>
+                <label className="text-zinc-400 text-[10px] uppercase block mb-1">Địa chỉ cụ thể (Số nhà, tên đường):</label>
                 <input
                   type="text"
                   required
+                  placeholder="VD: Số 12 ngõ 45 phố Duy Tân"
                   value={newAddr.street}
                   onChange={(e) => setNewAddr({ ...newAddr, street: e.target.value })}
-                  className="w-full bg-white rounded-sm p-2.5 font-medium border"
+                  className="w-full bg-[#1c1c1c] border border-zinc-800 p-2 text-white font-sans text-xs"
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAdd(false)}
-                  className="flex-1 py-2.5 rounded-sm border border-neutral-300 font-bold text-neutral-600 hover:bg-neutral-100"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 liquid-glass-btn-accent text-white font-bold uppercase tracking-wider"
-                >
-                  Lưu địa chỉ
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-white text-black font-bold uppercase tracking-wider text-xs cursor-pointer mt-3"
+              >
+                LƯU ĐỊA CHỈ GIAO HÀNG
+              </button>
             </form>
           </div>
         </div>

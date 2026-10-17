@@ -31,7 +31,8 @@ export default function CheckoutPage() {
   const isBuyNow = new URLSearchParams(location.search).get('buy_now') === 'true';
 
   // Lấy dữ liệu giỏ hàng hoặc dữ liệu Buy Now
-  const cartItemsStore = useCartStore((state) => state.items);
+  const rawCartItemsStore = useCartStore((state) => state.items);
+  const cartItemsStore = Array.isArray(rawCartItemsStore) ? rawCartItemsStore : [];
   const clearCartStore = useCartStore((state) => state.clearCart);
   const createOrderInStore = useOrderStore((state) => state.createOrder);
 
@@ -341,7 +342,7 @@ export default function CheckoutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase block">
-              TRANSACTION CHECKOUT // 6-TABLE POSTGRESQL SCHEMA
+              SECURE CHECKOUT // BẢO MẬT GIAO DỊCH
             </span>
             <h1 className="font-inter font-black text-2xl sm:text-3xl text-white tracking-tight mt-1">
               {isBuyNow ? 'Mua Ngay (Buy Now)' : 'Thanh Toán Đơn Hàng'}
@@ -364,7 +365,7 @@ export default function CheckoutPage() {
           ==================================================================== */}
           <div className="lg:col-span-7 space-y-6">
             
-            {/* 1. KHÁCH HÀNG & ĐỊA CHỈ NHẬN (order_customers & order_shipping_addresses) */}
+            {/* 1. KHÁCH HÀNG & ĐỊA CHỈ NHẬN */}
             <div className="border border-zinc-800 bg-[#080808]">
               <div className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-950/60 flex items-center justify-between font-mono text-xs">
                 <div className="flex items-center gap-2">
@@ -387,11 +388,11 @@ export default function CheckoutPage() {
 
               <div className="p-5 sm:p-6 space-y-5">
                 
-                {/* Nếu là thành viên: Cho chọn từ Sổ Địa Chỉ customer_addresses */}
+                {/* Nếu là thành viên: Cho chọn từ Sổ Địa Chỉ */}
                 {isMember && !useCustomAddress ? (
                   <div className="space-y-3 font-mono text-xs">
                     <span className="text-zinc-400 uppercase tracking-widest text-[10px] block">
-                      CHỌN TỪ SỔ ĐỊA CHỈ CỦA BẠN (customer_addresses):
+                      CHỌN TỪ SỔ ĐỊA CHỈ CỦA BẠN:
                     </span>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -548,7 +549,7 @@ export default function CheckoutPage() {
 
                     <div className="space-y-1">
                       <label className="text-zinc-400 text-[10px] uppercase">
-                        GHI CHÚ GIAO HÀNG (note)
+                        GHI CHÚ GIAO HÀNG
                       </label>
                       <input
                         type="text"
@@ -564,13 +565,13 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* 2. PHƯƠNG THỨC THANH TOÁN (payment_method: cod | bank_qr) */}
+            {/* 2. PHƯƠNG THỨC THANH TOÁN */}
             <div className="border border-zinc-800 bg-[#080808]">
               <div className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-950/60 flex items-center justify-between font-mono text-xs">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-white" />
                   <span className="font-bold text-white uppercase">
-                    02 // PHƯƠNG THỨC THANH TOÁN (payment_method)
+                    02 // PHƯƠNG THỨC THANH TOÁN
                   </span>
                 </div>
               </div>
@@ -613,7 +614,7 @@ export default function CheckoutPage() {
                     <div className="space-y-1">
                       <div className="font-bold text-white flex items-center gap-2">
                         <QrCode className="w-4 h-4 text-amber-400" />
-                        <span>CHUYỂN KHOẢN NGÂN HÀNG VIETQR (BANK_QR)</span>
+                        <span>CHUYỂN KHOẢN NGÂN HÀNG (VIETQR)</span>
                       </div>
                       <p className="text-zinc-500 text-[11px] leading-relaxed">
                         Quét mã QR qua app ngân hàng bất kỳ để thanh toán tự động không cần nhập thông tin.
@@ -698,7 +699,7 @@ export default function CheckoutPage() {
               {/* Ô nhập mã Voucher */}
               <div className="space-y-2">
                 <span className="text-[10px] text-zinc-400 uppercase tracking-widest block">
-                  MÃ KHUYẾN MÃI (vouchers.code):
+                  MÃ KHUYẾN MÃI / VOUCHER:
                 </span>
 
                 {appliedVoucher ? (
@@ -741,7 +742,7 @@ export default function CheckoutPage() {
               <div className="border-t border-zinc-900 pt-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-zinc-400 uppercase tracking-widest">
-                    ĐIỂM THƯỞNG (loyalty_points):
+                    ĐIỂM THƯỞNG TÍCH LŨY:
                   </span>
 
                   {isMember ? (
@@ -754,15 +755,15 @@ export default function CheckoutPage() {
                 </div>
 
                 {!isMember ? (
-                  /* Trigger CSDL chặn khách vãng lai dùng điểm */
+                  /* Gợi ý đăng nhập cho khách vãng lai */
                   <div className="p-2.5 border border-zinc-800 bg-zinc-950 text-zinc-500 text-[10px] flex items-center gap-2">
                     <Lock className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
                     <span>
-                      Trigger DB chặn khách vãng lai dùng điểm. Vui lòng{' '}
+                      Tính năng đổi điểm dành riêng cho thành viên. Vui lòng{' '}
                       <Link to="/login" className="text-white underline">
                         đăng nhập
                       </Link>{' '}
-                      để tích lũy & đổi điểm.
+                      để sử dụng điểm thưởng.
                     </span>
                   </div>
                 ) : (
@@ -785,32 +786,32 @@ export default function CheckoutPage() {
 
                     <div className="flex justify-between text-[9px] text-zinc-600">
                       <span>0 ĐIỂM</span>
-                      <span>1 ĐIỂM = 1.000₫ (loyalty.point_value_vnd)</span>
+                      <span>1 ĐIỂM = 1.000₫</span>
                       <span>MAX: {maxPointsCanUse}</span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Bảng Chi Tiết Tính Toán Tiền Khớp CHECK Constraint */}
+              {/* Bảng Chi Tiết Tính Toán Tiền */}
               <div className="border-t border-zinc-800 pt-4 space-y-2 text-xs">
                 <div className="flex justify-between text-zinc-400">
-                  <span>TIỀN HÀNG (subtotal)</span>
+                  <span>TẠM TÍNH HÀNG HÓA</span>
                   <span className="text-white">{formatVND(subtotal)}</span>
                 </div>
 
                 <div className="flex justify-between text-zinc-400">
-                  <span>GIẢM GIÁ VOUCHER (voucher_discount)</span>
+                  <span>GIẢM GIÁ VOUCHER</span>
                   <span className="text-emerald-400">-{formatVND(voucherDiscount)}</span>
                 </div>
 
                 <div className="flex justify-between text-zinc-400">
-                  <span>GIẢM GIÁ ĐIỂM (points_discount)</span>
+                  <span>GIẢM TRỪ ĐIỂM THƯỞNG</span>
                   <span className="text-emerald-400">-{formatVND(pointsDiscount)}</span>
                 </div>
 
                 <div className="flex justify-between text-zinc-400">
-                  <span>PHÍ VẬN CHUYỂN (shipping_fee)</span>
+                  <span>PHÍ VẬN CHUYỂN</span>
                   <span className="text-white">
                     {shippingFee === 0 ? (
                       <strong className="text-emerald-400">MIỄN PHÍ</strong>
@@ -820,9 +821,10 @@ export default function CheckoutPage() {
                   </span>
                 </div>
 
-                {/* Công thức DB CHECK constraint */}
-                <div className="p-2 border border-zinc-900 bg-zinc-950 text-[9px] text-zinc-500">
-                  RÀNG BUỘC CSDL: total_amount = subtotal ({formatVND(subtotal)}) + shipping_fee ({formatVND(shippingFee)}) - voucher_discount ({formatVND(voucherDiscount)}) - points_discount ({formatVND(pointsDiscount)})
+                {/* Cam kết dịch vụ */}
+                <div className="p-2 border border-zinc-900 bg-zinc-950 text-[10px] text-zinc-400 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Miễn phí vận chuyển toàn quốc cho đơn hàng từ 500.000₫</span>
                 </div>
 
                 {/* Tổng Tiền Phải Thanh Toán */}
@@ -840,12 +842,12 @@ export default function CheckoutPage() {
                 disabled={isSubmitting || itemsToCheckout.length === 0}
                 className="w-full py-4 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-xs font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl active:translate-y-0.5 disabled:opacity-50 mt-4"
               >
-                <span>{isSubmitting ? 'ĐANG KHỞI TẠO ĐƠN...' : 'XÁC NHẬN ĐẶT HÀNG // CONFIRM'}</span>
+                <span>{isSubmitting ? 'ĐANG KHỞI TẠO ĐƠN...' : 'XÁC NHẬN ĐẶT HÀNG'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <div className="text-center font-mono text-[9px] text-zinc-600">
-                GIAO DỊCH GHI NHẬN 6 BẢNG DỮ LIỆU ĐỒNG THỜI
+                GIAO HÀNG TOÀN QUỐC // BẢO HIỂM HÀNG HÓA 100%
               </div>
 
             </div>

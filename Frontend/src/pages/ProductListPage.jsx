@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ArrowUpDown } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { ArrowUpDown, Filter, Search, Sparkles } from 'lucide-react';
 import { CATEGORIES } from '../data/mockData';
 import { useDbStore } from '../store/dbStore';
 import ProductCard from '../components/ProductCard';
@@ -13,128 +13,152 @@ export default function ProductListPage() {
   const [sortBy, setSortBy] = useState('popular'); // 'popular' | 'price_asc' | 'price_desc'
   const [maxPrice, setMaxPrice] = useState(1500000);
 
-  const products = useDbStore((state) => state.products);
+  const rawProducts = useDbStore((state) => state.products);
+  const products = Array.isArray(rawProducts) ? rawProducts : [];
 
   const filteredProducts = useMemo(() => {
-    return products.filter((item) => {
-      // Lọc danh mục
-      if (currentCategory !== 'all' && item.category_id !== currentCategory) {
-        return false;
-      }
-      // Lọc tìm kiếm
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchName = item.name.toLowerCase().includes(q);
-        const matchCode = item.code?.toLowerCase().includes(q);
-        const matchDesc = item.short_desc?.toLowerCase().includes(q);
-        if (!matchName && !matchCode && !matchDesc) return false;
-      }
-      // Lọc giá
-      if (item.price > maxPrice) return false;
+    return products
+      .filter((item) => {
+        if (!item) return false;
+        // Lọc danh mục
+        if (currentCategory !== 'all' && item.category_id !== currentCategory) {
+          return false;
+        }
+        // Lọc tìm kiếm
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchName = String(item.name || '').toLowerCase().includes(q);
+          const matchCode = String(item.code || '').toLowerCase().includes(q);
+          const matchDesc = String(item.short_desc || '').toLowerCase().includes(q);
+          if (!matchName && !matchCode && !matchDesc) return false;
+        }
+        // Lọc giá
+        if (item.price > maxPrice) return false;
 
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'price_asc') return a.price - b.price;
-      if (sortBy === 'price_desc') return b.price - a.price;
-      return b.rating - a.rating;
-    });
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'price_asc') return (a.price || 0) - (b.price || 0);
+        if (sortBy === 'price_desc') return (b.price || 0) - (a.price || 0);
+        return (b.rating || 5) - (a.rating || 5);
+      });
   }, [products, currentCategory, searchQuery, sortBy, maxPrice]);
 
+  const handleCategoryChange = (catId) => {
+    const params = new URLSearchParams(searchParams);
+    if (catId === 'all') {
+      params.delete('category');
+    } else {
+      params.set('category', catId);
+    }
+    setSearchParams(params);
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
       
-      {/* Header trang danh sách */}
-      <div className="border-b border-neutral-200 pb-4">
-        <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight">
-          {searchQuery
-            ? `Kết quả tìm kiếm cho: "${searchQuery}"`
-            : CATEGORIES.find((c) => c.id === currentCategory)?.name || 'Bộ Sưu Tập Trang Phục'}
-        </h1>
-        <p className="text-xs text-neutral-500 mt-1">
-          Hiển thị {filteredProducts.length} sản phẩm phù hợp trong hệ thống
-        </p>
+      {/* Header */}
+      <div className="border-b border-zinc-800 pb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+              CATALOG // 01
+            </span>
+          </div>
+          <h1 className="font-inter font-black text-2xl sm:text-3xl text-white tracking-tight uppercase">
+            {searchQuery
+              ? `KẾT QUẢ TÌM KIẾM: "${searchQuery}"`
+              : currentCategory === 'nu'
+              ? 'THỜI TRANG NỮ [BST RAYON 479073]'
+              : currentCategory === 'nam'
+              ? 'THỜI TRANG NAM [BST LÔNG CỪU 486116]'
+              : 'TOÀN BỘ BỘ SƯU TẬP'}
+          </h1>
+          <p className="font-mono text-xs text-zinc-400">
+            Trang phục Streetwear & Techwear kỹ thuật cao, tối ưu công năng cho cuộc sống hiện đại.
+          </p>
+        </div>
+
+        <div className="font-mono text-xs text-zinc-400 border border-zinc-800 bg-zinc-950/60 px-3.5 py-2">
+          <span>TÌM THẤY: </span>
+          <strong className="text-white">{filteredProducts.length} THIẾT KẾ</strong>
+        </div>
       </div>
 
-      {/* Categories Buttons & Controls */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+      {/* Filter Bar 1px Swiss Grid */}
+      <div className="p-4 bg-[#0c0c0c] border border-zinc-800 flex flex-wrap items-center justify-between gap-4 font-mono text-xs">
         
-        {/* Category Buttons */}
-        <div className="flex flex-wrap gap-1.5">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                const nextParams = new URLSearchParams(searchParams);
-                if (cat.id === 'all') {
-                  nextParams.delete('category');
-                } else {
-                  nextParams.set('category', cat.id);
-                }
-                setSearchParams(nextParams);
-              }}
-              className={`px-4 py-2 text-xs font-black tracking-wider transition-all border ${
-                currentCategory === cat.id
-                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
-                  : 'bg-white text-neutral-700 border-neutral-300 hover:border-neutral-700'
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+        {/* Category Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => handleCategoryChange('all')}
+            className={`px-3 py-1.5 uppercase font-bold tracking-wider border transition-all cursor-pointer ${
+              currentCategory === 'all'
+                ? 'bg-white text-black border-white'
+                : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-white'
+            }`}
+          >
+            TẤT CẢ
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange('nu')}
+            className={`px-3 py-1.5 uppercase font-bold tracking-wider border transition-all cursor-pointer ${
+              currentCategory === 'nu'
+                ? 'bg-white text-black border-white'
+                : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-white'
+            }`}
+          >
+            NỮ (RAYON 479073)
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange('nam')}
+            className={`px-3 py-1.5 uppercase font-bold tracking-wider border transition-all cursor-pointer ${
+              currentCategory === 'nam'
+                ? 'bg-white text-black border-white'
+                : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-white'
+            }`}
+          >
+            NAM (LÔNG CỪU 486116)
+          </button>
         </div>
 
-        {/* Sort & Price Filter controls */}
-        <div className="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-end">
-          
-          <div className="flex items-center gap-2 text-xs font-semibold text-neutral-700 bg-neutral-50 px-3 py-1.5 border border-neutral-200">
-            <span>Giá tối đa:</span>
-            <input
-              type="range"
-              min="200000"
-              max="1500000"
-              step="50000"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(Number(e.target.value))}
-              className="w-24 accent-[#e60012]"
-            />
-            <span className="font-mono font-black text-neutral-900">{(maxPrice / 1000).toLocaleString('vi-VN')}K</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs bg-neutral-50 px-3 py-1.5 border border-neutral-200">
-            <ArrowUpDown className="w-3.5 h-3.5 text-neutral-500" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="bg-transparent border-none text-xs font-bold text-neutral-800 focus:outline-none cursor-pointer"
-            >
-              <option value="popular">Được đánh giá cao</option>
-              <option value="price_asc">Giá: Thấp đến cao</option>
-              <option value="price_desc">Giá: Cao đến thấp</option>
-            </select>
-          </div>
-
+        {/* Sort Controls */}
+        <div className="flex items-center gap-3">
+          <span className="text-zinc-500 uppercase text-[10px]">SẮP XẾP:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="bg-[#161616] border border-zinc-800 px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-zinc-500"
+          >
+            <option value="popular">Đánh giá cao nhất ★</option>
+            <option value="price_asc">Giá tăng dần &uarr;</option>
+            <option value="price_desc">Giá giảm dần &darr;</option>
+          </select>
         </div>
 
       </div>
 
-      {/* Grid sản phẩm */}
+      {/* Grid Sản Phẩm */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+          {filteredProducts.map((p) => (
+            <ProductCard key={p.id} product={p} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 bg-neutral-50 border border-neutral-200">
-          <p className="text-neutral-500 text-xs font-bold">Không tìm thấy sản phẩm nào phù hợp với bộ lọc.</p>
+        <div className="text-center py-24 max-w-lg mx-auto p-8 border border-zinc-800 bg-[#0c0c0c] space-y-4 font-mono">
+          <h3 className="font-bold text-white text-base uppercase">KHÔNG TÌM THẤY SẢN PHẨM PHÙ HỢP</h3>
+          <p className="text-xs text-zinc-400 font-sans">
+            Không có sản phẩm nào thỏa mãn điều kiện lọc. Vui lòng chọn lại danh mục hoặc từ khóa tìm kiếm.
+          </p>
           <button
-            onClick={() => {
-              setMaxPrice(1500000);
-              setSearchParams({});
-            }}
-            className="mt-4 px-4 py-2 bg-neutral-900 text-white text-xs font-black uppercase tracking-wider"
+            onClick={() => handleCategoryChange('all')}
+            className="px-5 py-2.5 bg-white text-black font-bold uppercase tracking-wider text-xs cursor-pointer"
           >
-            Đặt lại bộ lọc
+            XEM TẤT CẢ SẢN PHẨM
           </button>
         </div>
       )}

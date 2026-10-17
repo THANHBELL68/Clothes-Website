@@ -2,11 +2,11 @@ import React from 'react';
 
 export default function AetherStickySidebar({ activeSection = 'hero', onScrollToSection }) {
   const sections = [
-    { id: 'hero', label: 'HERO', num: '00' },
-    { id: 'catalog', label: 'CATALOG', num: '01' },
-    { id: 'craftsmanship', label: 'CRAFTSMANSHIP', num: '02' },
-    { id: 'reviews', label: 'REVIEWS', num: '03' },
-    { id: 'footer', label: 'FOOTER', num: '04' },
+    { id: 'hero', label: 'TRANG ĐẦU', num: '00' },
+    { id: 'catalog', label: 'SẢN PHẨM', num: '01' },
+    { id: 'craftsmanship', label: 'CHẤT LIỆU', num: '02' },
+    { id: 'reviews', label: 'ĐÁNH GIÁ', num: '03' },
+    { id: 'footer', label: 'CHÂN TRANG', num: '04' },
   ];
 
   const currentSection = sections.find((s) => s.id === activeSection) || sections[0];

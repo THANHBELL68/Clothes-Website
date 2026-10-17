@@ -226,6 +226,8 @@ export interface ProductImage {
   variant_id: number | null;
   url: string;
   sort_order: number;
+  label?: string | null;
+  color_id?: number | null;
 }
 
 // ============================================================================
@@ -791,6 +793,7 @@ export interface ProductWithDetails extends Product {
   variants: VariantWithDetails[];
   images: ProductImage[];
   rating?: ProductRatingView | null;
+  video_url?: string | null;
 }
 
 /** Chi tiết giỏ hàng đầy đủ cho UI */

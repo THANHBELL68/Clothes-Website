@@ -85,7 +85,7 @@ export const useChatStore = create(
         // 1. Nếu là thành viên (có customer_id): tìm hội thoại đang mở của customer
         if (customer_id) {
           const existing = state.conversations.find(
-            (c) => c.customer_id === customer_id && c.status === 'open'
+            (c) => String(c.customer_id) === String(customer_id) && c.status === 'open'
           );
           if (existing) {
             set({ activeConversationId: existing.id });
@@ -181,9 +181,25 @@ export const useChatStore = create(
 
       // Đánh dấu đã đọc
       markAsRead: (conversation_id, reader_type) => {
+        const state = get();
+        const conv = state.conversations.find((c) => c.id === conversation_id);
+        const unreadCount = reader_type === 'staff' ? conv?.unread_staff : conv?.unread_customer;
+        
+        const hasUnreadMessages = state.messages.some(
+          (m) =>
+            m.conversation_id === conversation_id &&
+            ((reader_type === 'staff' && m.sender_type === 'customer' && !m.read_at) ||
+              (reader_type === 'customer' && m.sender_type === 'staff' && !m.read_at))
+        );
+
+        // Nếu không có tin nhắn chưa đọc, thoát ngay để tránh kích hoạt re-render vô tận
+        if ((!unreadCount || unreadCount === 0) && !hasUnreadMessages) {
+          return;
+        }
+
         const now = new Date().toISOString();
-        set((state) => ({
-          conversations: state.conversations.map((c) => {
+        set((s) => ({
+          conversations: s.conversations.map((c) => {
             if (c.id === conversation_id) {
               return {
                 ...c,
@@ -193,7 +209,7 @@ export const useChatStore = create(
             }
             return c;
           }),
-          messages: state.messages.map((m) => {
+          messages: s.messages.map((m) => {
             if (m.conversation_id === conversation_id) {
               if (reader_type === 'staff' && m.sender_type === 'customer' && !m.read_at) {
                 return { ...m, read_at: now };

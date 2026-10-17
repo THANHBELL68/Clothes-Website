@@ -43,16 +43,17 @@ import {
 } from '../data/aetherData';
 import toast from 'react-hot-toast';
 
-// Chương trình khuyến mãi đang chạy (now() BETWEEN start_at AND end_at)
+// Chương trình khuyến mãi đang chạy
 const ACTIVE_PROMOTIONS = [
-  { id: 1, name: 'MÙA ĐÔNG FW/26', discount_percent: 10, product_ids: [1, 3] },
+  { id: 1, name: 'MÙA ĐÔNG FW/26', discount_percent: 10, product_ids: [1, 2] },
 ];
 
 export default function HomePage() {
   const navigate = useNavigate();
 
   // Store giỏ hàng & sản phẩm yêu thích
-  const cartItemsStore = useCartStore((state) => state.items);
+  const rawCartItemsStore = useCartStore((state) => state.items);
+  const cartItemsStore = Array.isArray(rawCartItemsStore) ? rawCartItemsStore : [];
   const addToCartStore = useCartStore((state) => state.addToCart);
   const updateQuantityStore = useCartStore((state) => state.updateQuantity);
   const removeFromCartStore = useCartStore((state) => state.removeFromCart);
@@ -77,15 +78,13 @@ export default function HomePage() {
 
   // State màu sắc đang được chọn cho từng ô sản phẩm trên Grid (productId -> colorId)
   const [cardSelectedColor, setCardSelectedColor] = useState({
-    1: 1, // Áo thun basic -> Màu Đen (#000000)
-    2: 3, // Quần jean slim -> Màu Xanh (#1F3A93)
-    3: 2, // Áo kiểu Rayon -> Màu Trắng (#FFFFFF)
-    4: 5, // Áo khoác lông cừu -> Màu Navy (#1E293B)
+    1: 1, // Áo Rayon Nữ -> Màu Trắng (color 1)
+    2: 3, // Áo Khoác Lông Cừu Nam -> Màu Navy (color 3)
   });
 
   // Tính tổng số lượng trong giỏ hàng
   const totalCartCount = useMemo(() => {
-    return cartItemsStore.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    return cartItemsStore.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
   }, [cartItemsStore]);
 
   // Cuộn trang mượt
@@ -188,13 +187,21 @@ export default function HomePage() {
   const getProductDisplayImage = (product) => {
     const activeColorId = cardSelectedColor[product.id];
     if (activeColorId) {
-      const variantWithColor = product.variants.find((v) => (v.color_id || v.color?.id) === activeColorId);
-      if (variantWithColor) {
-        const imgByVariant = product.images.find((img) => img.variant_id === variantWithColor.id);
-        if (imgByVariant) return imgByVariant.url;
+      // 1. Ưu tiên tìm ảnh có color_id khớp trực tiếp
+      const imgByColor = product.images?.find((img) => img.color_id === activeColorId);
+      if (imgByColor) return typeof imgByColor === 'string' ? imgByColor : imgByColor.url;
+
+      // 2. Tìm qua các biến thể có color_id khớp
+      const matchedVariants = product.variants?.filter((v) => (v.color_id || v.color?.id) === activeColorId);
+      if (matchedVariants?.length) {
+        for (const mv of matchedVariants) {
+          const imgByVar = product.images?.find((img) => img.variant_id === mv.id);
+          if (imgByVar) return typeof imgByVar === 'string' ? imgByVar : imgByVar.url;
+        }
       }
     }
-    return product.images[0]?.url || product.images[0] || '/placeholder.jpg';
+    const firstImg = product.images?.[0];
+    return typeof firstImg === 'string' ? firstImg : firstImg?.url || product.image || '/placeholder.jpg';
   };
 
   // Thêm nhanh vào giỏ hàng
@@ -267,7 +274,7 @@ export default function HomePage() {
     Boolean(selectedMaterialName);
 
   return (
-    <div className="relative w-full min-h-screen bg-[#080808] text-[#fafafa] font-inter overflow-x-hidden selection:bg-[#fafafa] selection:text-[#080808]">
+    <div className="relative w-full min-h-screen bg-[#080808] text-[#fafafa] font-inter overflow-x-hidden selection:bg-[#fafafa] selection:text-[#080808] lg:pr-14">
       
       {/* 1. TOP NAVBAR (1PX GRID) */}
       <AetherNavbar
@@ -329,15 +336,15 @@ export default function HomePage() {
                 },
                 opacity: { duration: 1 },
               }}
-              className={`${card.width} ${card.aspect} border border-zinc-800/80 bg-zinc-950/60 rounded-md overflow-hidden shadow-2xl backdrop-blur-xs`}
+              className={`${card.width} ${card.aspect} border border-zinc-800/80 bg-zinc-950/60 rounded-md overflow-hidden shadow-2xl backdrop-blur-xs hero-floating-card`}
             >
               <img
                 src={card.image}
                 alt={card.title}
                 className="w-full h-full object-cover filter contrast-[1.08] brightness-[0.92]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent flex flex-col justify-end p-2.5">
-                <span className="font-mono text-[9px] text-zinc-400 tracking-wider">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-end p-2.5">
+                <span className="font-mono text-[9px] text-zinc-300 tracking-wider">
                   {card.tag}
                 </span>
                 <span className="font-mono text-[10px] font-bold text-white tracking-widest truncate">
@@ -348,14 +355,8 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Lớp phủ Radial-Gradient đen ở tâm để tên thương hiệu luôn nổi bật 100% */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'radial-gradient(circle at 50% 50%, rgba(8,8,8,0.95) 0%, rgba(8,8,8,0.75) 45%, rgba(8,8,8,0.2) 80%, transparent 100%)',
-          }}
-        />
+        {/* Lớp phủ Radial-Gradient điều chỉnh mượt theo giao diện Sáng / Tối */}
+        <div className="absolute inset-0 pointer-events-none hero-radial-mask" />
 
         {/* Khối chữ trung tâm */}
         <div className="relative z-20 max-w-4xl mx-auto text-center space-y-7 px-4">
@@ -368,7 +369,7 @@ export default function HomePage() {
             className="inline-flex items-center gap-2.5 px-3 py-1 border border-zinc-800 bg-zinc-950/80 font-mono text-[10px] sm:text-[11px] tracking-widest text-[#a1a1aa] uppercase"
           >
             <span className="w-1.5 h-1.5 bg-[#fafafa] animate-pulse" />
-            <span>DROP FW/26 // ARCHIVE RELEASE</span>
+            <span>BỘ SƯU TẬP FW/26 // PHIÊN BẢN GIỚI HẠN</span>
             <span className="text-zinc-700">//</span>
             <span className="text-white">AETHER LABS</span>
           </motion.div>
@@ -390,9 +391,9 @@ export default function HomePage() {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="font-inter text-base sm:text-xl lg:text-2xl text-[#a1a1aa] font-light max-w-2xl mx-auto leading-relaxed"
           >
-            Engineered garments for{' '}
+            Trang phục kỹ thuật cao cho{' '}
             <span className="font-serif italic font-normal text-zinc-100 text-2xl sm:text-3xl">
-              modern nomads
+              thế hệ dịch chuyển
             </span>
             .
           </motion.p>
@@ -404,21 +405,21 @@ export default function HomePage() {
             transition={{ duration: 0.8, delay: 0.45 }}
             className="pt-2 flex flex-wrap items-center justify-center gap-4"
           >
-            {/* Nút 1: SHOP NEW DROPS (Nền trắng chữ đen) */}
+            {/* Nút 1: MUA BỘ SƯU TẬP MỚI (Nền trắng chữ đen) */}
             <button
               onClick={() => scrollToSection('catalog')}
               className="px-8 py-4 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-[11px] font-bold tracking-widest uppercase transition-all shadow-xl active:translate-y-0.5 flex items-center gap-2 cursor-pointer"
             >
-              <span>SHOP NEW DROPS</span>
+              <span>MUA BỘ SƯU TẬP MỚI</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
 
-            {/* Nút 2: EXPLORE ARCHIVE (Nền đen viền mảnh 1px) */}
+            {/* Nút 2: KHÁM PHÁ CHẤT LIỆU (Nền đen viền mảnh 1px) */}
             <button
               onClick={() => scrollToSection('craftsmanship')}
-              className="px-8 py-4 bg-[#080808] text-[#fafafa] border border-zinc-700 hover:border-[#fafafa] font-mono text-[11px] tracking-widest uppercase transition-all flex items-center gap-2 cursor-pointer hover:bg-zinc-900/60"
+              className="px-8 py-4 bg-[#080808] text-[#fafafa] border border-zinc-700 hover:border-[#fafafa] font-mono text-[11px] tracking-widest uppercase transition-all flex items-center gap-2 cursor-pointer hover:bg-zinc-900/60 hero-sec-btn"
             >
-              <span>EXPLORE ARCHIVE</span>
+              <span>KHÁM PHÁ CHẤT LIỆU</span>
             </button>
           </motion.div>
 
@@ -429,7 +430,7 @@ export default function HomePage() {
             transition={{ duration: 1, delay: 0.6 }}
             className="pt-3 font-mono text-[10px] sm:text-[11px] tracking-widest text-zinc-500 uppercase"
           >
-            FREE GLOBAL SHIPPING // GORE-TEX PRO // LIMITED ARCHIVE RELEASE
+            GIAO HÀNG MIỄN PHÍ TOÀN QUỐC // VẢI KỸ THUẬT CAO // PHIÊN BẢN GIỚI HẠN
           </motion.div>
 
         </div>
@@ -474,134 +475,152 @@ export default function HomePage() {
         <div className="px-4 sm:px-8 lg:px-12 py-14 border-b border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
           <div className="lg:col-span-8 space-y-3">
             <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase block">
-              01 // FEATURED GARMENTS (CATALOG GRID)
+              01 // DANH MỤC SẢN PHẨM (CATALOG)
             </span>
             <h2 className="font-inter font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#fafafa] leading-[1.08]">
-              The armor that mere <span className="font-serif italic font-normal text-zinc-300">trends</span> cannot outlast.
+              Trang phục kỹ thuật <span className="font-serif italic font-normal text-zinc-300">vượt thời gian</span>.
             </h2>
           </div>
 
           <div className="lg:col-span-4 lg:text-right font-mono text-[11px] text-zinc-400 space-y-1">
-            <div>HỆ THỐNG CƠ SỞ DỮ LIỆU: POSTGRESQL 13+</div>
-            <div className="text-zinc-500">VIEWS: v_inventory_available & v_product_rating</div>
-            <div className="text-emerald-400">● TỒN KHO THỰC TẾ & ĐÁNH GIÁ CHUẨN XÁC</div>
+            <div>BỘ SƯU TẬP // THU ĐÔNG 2026</div>
+            <div className="text-zinc-500">CHẤT LIỆU CAO CẤP // CHỐNG GIÓ VÀ GIỮ NHIỆT</div>
+            <div className="text-emerald-400">● TỒN KHO THỰC TẾ // GIAO HỎA TỐC</div>
           </div>
         </div>
 
         {/* =====================================================================
-            FILTER BAR (DẠNG Ô VUÔNG 1PX: CATEGORIES, SIZES, COLORS, MATERIALS)
+            FILTER BAR (DẠNG VÁCH NGĂN 1PX LIỀN MẠCH THEO PHONG CÁCH SWISS GRID)
         ====================================================================== */}
-        <div className="border-b border-zinc-800 bg-zinc-950/60 p-4 sm:px-8 lg:px-12">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="border-b border-zinc-800 bg-zinc-950/70">
+          <div className="flex flex-col xl:flex-row items-stretch divide-y xl:divide-y-0 xl:divide-x divide-zinc-800 text-[11px] font-mono">
             
-            {/* Hàng lọc: Categories + Sizes + Colors + Materials */}
-            <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono">
-              
-              {/* Lọc Categories */}
-              <div className="flex items-center border border-zinc-800 bg-[#080808] p-1">
-                <span className="px-2 text-zinc-500 uppercase hidden sm:inline">DANH MỤC:</span>
+            {/* 1. Lọc Danh Mục */}
+            <div className="flex items-center px-4 py-2.5 gap-2 shrink-0 overflow-x-auto">
+              <span className="text-zinc-500 font-bold uppercase shrink-0">DANH MỤC:</span>
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`px-3 py-1 uppercase tracking-wider transition-all cursor-pointer ${
+                  !selectedCategory
+                    ? 'bg-white text-black font-bold shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                }`}
+              >
+                TẤT CẢ
+              </button>
+              {MOCK_CATEGORIES.map((cat) => (
                 <button
-                  onClick={() => setSelectedCategory(null)}
-                  className={`px-2.5 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
-                    !selectedCategory ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                  key={cat.slug}
+                  onClick={() => setSelectedCategory(cat.slug)}
+                  className={`px-3 py-1 uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                    selectedCategory === cat.slug
+                      ? 'bg-white text-black font-bold shadow-sm'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
                   }`}
                 >
-                  TẤT CẢ
+                  {cat.name}
                 </button>
-                {MOCK_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.slug}
-                    onClick={() => setSelectedCategory(cat.slug)}
-                    className={`px-2.5 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
-                      selectedCategory === cat.slug ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
+              ))}
+            </div>
 
-              {/* Lọc Sizes */}
-              <div className="flex items-center border border-zinc-800 bg-[#080808] p-1">
-                <span className="px-2 text-zinc-500 uppercase hidden sm:inline">SIZE:</span>
+            {/* 2. Lọc Kích Thước (Chỉ size áo S, M, L, XL - không có size quần) */}
+            <div className="flex items-center px-4 py-2.5 gap-2 shrink-0 overflow-x-auto">
+              <span className="text-zinc-500 font-bold uppercase shrink-0">SIZE:</span>
+              <button
+                onClick={() => setSelectedSize(null)}
+                className={`px-2.5 py-1 uppercase tracking-wider transition-all cursor-pointer ${
+                  !selectedSize
+                    ? 'bg-white text-black font-bold shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                }`}
+              >
+                TẤT CẢ
+              </button>
+              {MOCK_SIZES.map((sz) => (
                 <button
-                  onClick={() => setSelectedSize(null)}
-                  className={`px-2 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
-                    !selectedSize ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                  key={sz.id}
+                  onClick={() => setSelectedSize(sz.name)}
+                  className={`min-w-[28px] text-center px-2 py-1 uppercase tracking-wider transition-all cursor-pointer ${
+                    selectedSize === sz.name
+                      ? 'bg-white text-black font-bold shadow-sm'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
                   }`}
                 >
-                  ALL
+                  {sz.name}
                 </button>
-                {MOCK_SIZES.map((sz) => (
-                  <button
-                    key={sz.id}
-                    onClick={() => setSelectedSize(sz.name)}
-                    className={`min-w-[28px] text-center px-1.5 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
-                      selectedSize === sz.name ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    {sz.name}
-                  </button>
-                ))}
-              </div>
+              ))}
+            </div>
 
-              {/* Lọc Colors (Hiển thị ô màu từ colors.hex_code) */}
-              <div className="flex items-center border border-zinc-800 bg-[#080808] p-1 gap-1.5 px-2">
-                <span className="text-zinc-500 uppercase hidden sm:inline">MÀU:</span>
-                <button
-                  onClick={() => setSelectedColorId(null)}
-                  className={`px-2 py-0.5 tracking-wider uppercase transition-colors cursor-pointer text-[10px] ${
-                    !selectedColorId ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  ALL
-                </button>
-                {MOCK_COLORS.map((col) => (
-                  <button
-                    key={col.id}
-                    onClick={() => setSelectedColorId(col.id)}
-                    style={{ backgroundColor: col.hex_code }}
-                    className={`w-5 h-5 rounded-none border transition-transform cursor-pointer ${
-                      selectedColorId === col.id
-                        ? 'border-amber-400 scale-110 shadow-sm'
-                        : 'border-zinc-700 hover:scale-105'
-                    }`}
-                    title={col.name}
-                  />
-                ))}
-              </div>
-
-              {/* Lọc Materials */}
-              <div className="flex items-center border border-zinc-800 bg-[#080808] p-1">
-                <span className="px-2 text-zinc-500 uppercase hidden sm:inline">VẢI:</span>
-                {['Tất cả', 'Cotton', 'Denim', 'Rayon', 'Lông cừu'].map((mat) => {
-                  const val = mat === 'Tất cả' ? null : mat;
-                  const isActive = selectedMaterialName === val;
+            {/* 3. Lọc Màu Sắc (Viền nổi bật cho màu đen) */}
+            <div className="flex items-center px-4 py-2.5 gap-2.5 shrink-0 overflow-x-auto">
+              <span className="text-zinc-500 font-bold uppercase shrink-0">MÀU:</span>
+              <button
+                onClick={() => setSelectedColorId(null)}
+                className={`px-2.5 py-1 uppercase tracking-wider transition-all cursor-pointer ${
+                  !selectedColorId
+                    ? 'bg-white text-black font-bold shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                }`}
+              >
+                TẤT CẢ
+              </button>
+              <div className="flex items-center gap-2">
+                {MOCK_COLORS.map((col) => {
+                  const isBlack = col.hex_code.toUpperCase() === '#000000';
+                  const isSelected = selectedColorId === col.id;
                   return (
                     <button
-                      key={mat}
-                      onClick={() => setSelectedMaterialName(val)}
-                      className={`px-2.5 py-1 tracking-wider uppercase transition-colors cursor-pointer ${
-                        isActive ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
+                      key={col.id}
+                      onClick={() => setSelectedColorId(col.id)}
+                      style={{ backgroundColor: col.hex_code }}
+                      className={`w-5 h-5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'scale-110 ring-2 ring-white shadow-md'
+                          : 'opacity-80 hover:opacity-100 hover:scale-105'
+                      } ${
+                        isBlack
+                          ? 'border-2 border-zinc-500 ring-1 ring-zinc-700'
+                          : 'border border-zinc-600'
                       }`}
-                    >
-                      {mat}
-                    </button>
+                      title={col.name}
+                    />
                   );
                 })}
               </div>
-
             </div>
 
-            {/* Trạng thái bộ lọc & Nút Đặt Lại */}
-            <div className="flex items-center justify-between sm:justify-end gap-3 font-mono text-[11px]">
-              <span className="text-zinc-500">
-                HIỂN THỊ <strong className="text-white">{filteredProducts.length}</strong> / 4 SẢN PHẨM
+            {/* 4. Lọc Chất Liệu */}
+            <div className="flex items-center px-4 py-2.5 gap-2 shrink-0 overflow-x-auto">
+              <span className="text-zinc-500 font-bold uppercase shrink-0">VẢI:</span>
+              {['TẤT CẢ', 'RAYON', 'LÔNG CỪU'].map((mat) => {
+                const val = mat === 'TẤT CẢ' ? null : (mat === 'RAYON' ? 'Rayon' : 'Lông cừu');
+                const isActive = (val === null && selectedMaterialName === null) ||
+                  (val !== null && selectedMaterialName === val);
+                return (
+                  <button
+                    key={mat}
+                    onClick={() => setSelectedMaterialName(val)}
+                    className={`px-2.5 py-1 uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                      isActive
+                        ? 'bg-white text-black font-bold shadow-sm'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                    }`}
+                  >
+                    {mat}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 5. Bộ Đếm Sản Phẩm & Nút Đặt Lại */}
+            <div className="flex-1 flex items-center justify-between xl:justify-end px-4 py-2.5 gap-4">
+              <span className="text-zinc-400 font-mono">
+                HIỂN THỊ <strong className="text-white">{filteredProducts.length}</strong> / 2 SẢN PHẨM
               </span>
               {hasActiveFilters && (
                 <button
                   onClick={resetFilters}
-                  className="flex items-center gap-1.5 px-2.5 py-1 border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white hover:border-zinc-400 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1 border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white hover:border-zinc-400 transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>ĐẶT LẠI</span>
@@ -613,7 +632,7 @@ export default function HomePage() {
         </div>
 
         {/* =====================================================================
-            PRODUCT 2x2 EXPOSED 1PX BORDER GRID
+            PRODUCT 2x1 EXPOSED 1PX BORDER GRID (CHỈ 2 SẢN PHẨM NAM & NỮ)
         ====================================================================== */}
         {filteredProducts.length === 0 ? (
           <div className="py-24 text-center font-mono text-xs text-zinc-500 space-y-3">
@@ -626,7 +645,7 @@ export default function HomePage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 divide-zinc-800 border-b border-zinc-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-800 border-b border-zinc-800">
             {filteredProducts.map((garment, index) => {
               // Điểm đánh giá từ v_product_rating
               const ratingData =
@@ -649,22 +668,20 @@ export default function HomePage() {
               return (
                 <div
                   key={garment.id}
-                  className={`group relative flex flex-col justify-between bg-[#080808] transition-colors duration-300 hover:bg-zinc-950/40 ${
-                    index % 2 === 0 ? 'md:border-r border-zinc-800' : ''
-                  } ${index >= 2 ? 'md:border-t border-zinc-800' : ''}`}
+                  className="group relative flex flex-col justify-between bg-[#080808] transition-colors duration-300 hover:bg-zinc-950/40"
                 >
                   
-                  {/* Header nhỏ trên cùng: Danh mục + Điểm đánh giá từ v_product_rating */}
-                  <div className="p-4 sm:p-5 border-b border-zinc-800 flex items-center justify-between font-mono text-[11px] tracking-widest text-[#a1a1aa] bg-zinc-950/40">
+                  {/* Header nhỏ trên cùng: Căn đều lề chuẩn xác cho cả 2 cột */}
+                  <div className="p-5 sm:p-6 border-b border-zinc-800 flex items-center justify-between font-mono text-[11px] tracking-widest text-[#a1a1aa] bg-zinc-950/40">
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 bg-white" />
                       <span className="text-white font-bold uppercase">
-                        {String(garment.id).padStart(2, '0')} // {garment.category?.name || 'SẢN PHẨM'}
+                        {String(index + 1).padStart(2, '0')} // {garment.id === 1 ? 'ÁO NỮ' : 'ÁO NAM'}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {/* Điểm đánh giá v_product_rating */}
+                      {/* Điểm đánh giá */}
                       <div className="flex items-center gap-1 text-amber-400">
                         <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                         <span className="font-bold text-white">
@@ -682,20 +699,21 @@ export default function HomePage() {
                     onClick={() => setInspectGarment(garment)}
                     className="relative w-full aspect-[4/3] sm:aspect-[16/11] bg-zinc-950 bg-dot-matrix p-8 sm:p-12 flex items-center justify-center overflow-hidden cursor-pointer"
                   >
-                    {/* Badge Giảm Giá Monospace nếu nằm trong promotion_products còn hiệu lực */}
+                    {/* Badge Giảm Giá Monospace nếu có khuyến mãi */}
                     {activePromo && (
-                      <div className="absolute top-4 left-4 z-10 px-2.5 py-1 border border-rose-500/80 bg-rose-950/40 font-mono text-[10px] tracking-widest text-rose-300 uppercase shadow-md flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 bg-rose-400 animate-pulse" />
+                      <div className="absolute top-4 left-4 z-10 px-2.5 py-1 border border-rose-500/80 bg-rose-950/40 product-sale-badge font-mono text-[10px] tracking-widest text-rose-300 uppercase shadow-md flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-rose-400 rounded-full animate-pulse" />
                         <span>SALE -{activePromo.discount_percent}% // {activePromo.name}</span>
                       </div>
                     )}
 
-                    {/* Badge Tồn Kho Khả Dụng v_inventory_available */}
-                    <div className="absolute top-4 right-4 z-10 px-2 py-0.5 border border-zinc-800 bg-black/80 font-mono text-[9px] tracking-widest text-emerald-400 uppercase">
-                      ● CÒN {quantityAvailable} CHIẾC
+                    {/* Badge Tồn Kho Khả Dụng */}
+                    <div className="absolute top-4 right-4 z-10 px-2.5 py-1 border border-zinc-800 bg-black/80 product-stock-badge font-mono text-[9px] tracking-widest text-emerald-400 uppercase flex items-center gap-1.5 shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>CÒN {quantityAvailable} CHIẾC</span>
                     </div>
 
-                    {/* Ảnh Sản Phẩm */}
+                    {/* Ảnh Sản Phẩm - Luôn rõ nét, không bị làm mờ */}
                     <div className="relative w-full h-full flex items-center justify-center">
                       <img
                         src={displayImage}
@@ -704,14 +722,14 @@ export default function HomePage() {
                       />
                     </div>
 
-                    {/* Overlay Nút Quick View & Quick Add khi di chuột */}
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 p-4">
+                    {/* Thanh Nút Hành Động Ở Biên Dưới - KHÔNG LÀM MỜ ẢNH NGƯỜI MẪU */}
+                    <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex items-center justify-center gap-2.5 z-20 product-card-action-bar">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setInspectGarment(garment);
                         }}
-                        className="px-4 py-2.5 bg-black/80 border border-zinc-600 hover:border-white text-white font-mono text-[11px] tracking-widest uppercase transition-colors flex items-center gap-1.5"
+                        className="flex-1 py-2.5 px-3 bg-[#080808]/90 border border-zinc-700 hover:border-white hover:bg-zinc-900 text-white product-card-btn-view font-mono text-[11px] font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-lg"
                       >
                         <Maximize2 className="w-3.5 h-3.5" />
                         <span>XEM CHI TIẾT</span>
@@ -722,7 +740,7 @@ export default function HomePage() {
                           e.stopPropagation();
                           handleQuickAdd(garment);
                         }}
-                        className="px-4 py-2.5 bg-white text-black hover:bg-zinc-200 font-mono text-[11px] font-bold tracking-widest uppercase transition-colors flex items-center gap-1.5"
+                        className="flex-1 py-2.5 px-3 bg-white text-black hover:bg-zinc-200 product-card-btn-add font-mono text-[11px] font-bold tracking-widest uppercase transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-lg"
                       >
                         <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                         <span>+ THÊM NHANH</span>
@@ -765,8 +783,10 @@ export default function HomePage() {
                       {/* Chọn màu sắc tương tác */}
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[10px] text-zinc-500 uppercase">MÀU:</span>
-                        <div className="flex items-center gap-1.5">
-                          {garment.variants.map((v) => {
+                        <div className="flex items-center gap-2">
+                          {Array.from(
+                            new Map(garment.variants.map((v) => [v.color_id || v.color?.id, v])).values()
+                          ).map((v) => {
                             const colId = v.color_id || v.color?.id;
                             const hexCode = v.color?.hex_code || '#000000';
                             const colName = v.color?.name || v.color;
@@ -774,19 +794,20 @@ export default function HomePage() {
 
                             return (
                               <button
-                                key={v.sku}
+                                key={colId}
                                 onClick={() => handleSelectCardColor(garment.id, colId)}
                                 style={{ backgroundColor: hexCode }}
-                                className={`w-4 h-4 rounded-none border transition-all cursor-pointer ${
-                                  isSelected
-                                    ? 'border-white scale-125 shadow-md ring-1 ring-white/50'
-                                    : 'border-zinc-700 opacity-60 hover:opacity-100 hover:scale-110'
+                                className={`w-4 h-4 rounded-none color-swatch-dot transition-all cursor-pointer ${
+                                  isSelected ? 'is-active' : 'opacity-80 hover:opacity-100 hover:scale-110'
                                 }`}
-                                title={`${colName} (${hexCode}) - Bấm để xem ảnh biến thể`}
+                                title={`${colName} - Bấm để xem ảnh biến thể`}
                               />
                             );
                           })}
                         </div>
+                        <span className="font-mono text-[10px] text-zinc-400 font-bold ml-1">
+                          {activeVariant?.color?.name || activeVariant?.color || ''}
+                        </span>
                       </div>
 
                       {/* Nút lưu vào Wishlist */}
@@ -821,10 +842,10 @@ export default function HomePage() {
         <div className="px-4 sm:px-8 lg:px-12 py-16 border-b border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
           <div className="lg:col-span-8 space-y-3">
             <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase block">
-              02 // CRAFTSMANSHIP & ENGINEERING
+              02 // NGHỆ THUẬT CHẾ TÁC & VẬT LIỆU KỸ THUẬT
             </span>
             <h2 className="font-inter font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#fafafa] leading-[1.08]">
-              Stop buying <span className="font-serif italic font-normal text-zinc-300">disposable</span> fashion.
+              Nói không với thời trang <span className="font-serif italic font-normal text-zinc-300">dùng một lần</span>.
             </h2>
           </div>
 
@@ -846,7 +867,7 @@ export default function HomePage() {
                   {pillar.num}
                 </span>
                 <span className="font-mono text-[10px] text-zinc-500 tracking-widest">
-                  SPECS.v26
+                  TIÊU CHUẨN v26
                 </span>
               </div>
 
@@ -878,7 +899,7 @@ export default function HomePage() {
         <div className="px-4 sm:px-8 lg:px-12 py-16 border-b border-zinc-800 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
           <div className="lg:col-span-8 space-y-3">
             <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase block">
-              03 // WORN BY COMMUNITY (STREET STYLE FIT CHECKS)
+              03 // PHONG CÁCH TỪ CỘNG ĐỒNG (FIT CHECKS THỰC TẾ)
             </span>
             <h2 className="font-inter font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#fafafa] leading-[1.08]">
               Trải nghiệm thực tế từ <span className="font-serif italic font-normal text-zinc-300">cộng đồng</span> Aether.
@@ -923,13 +944,13 @@ export default function HomePage() {
                     {item.garment}
                   </span>
 
-                  {/* Nút [ SHOP THIS LOOK ] dạng monospace ở góc trái dưới */}
+                  {/* Nút [ XEM PHONG CÁCH NÀY ] dạng monospace ở góc trái dưới */}
                   <div className="pt-4">
                     <button
                       onClick={() => scrollToSection('catalog')}
                       className="px-4 py-2 border border-zinc-700 bg-black/80 hover:border-white hover:bg-white hover:text-black font-mono text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-1.5 cursor-pointer"
                     >
-                      <span>[ SHOP THIS LOOK ]</span>
+                      <span>[ XEM PHONG CÁCH NÀY ]</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
@@ -950,11 +971,11 @@ export default function HomePage() {
         {/* Khung CTA ở giữa */}
         <div className="px-4 sm:px-8 lg:px-12 py-20 border-b border-zinc-800 text-center space-y-6">
           <span className="font-mono text-[11px] tracking-widest text-zinc-500 uppercase">
-            END OF TRANSMISSION // DROP FW/26
+            BỘ SƯU TẬP FW/26 // PHIÊN BẢN GIỚI HẠN
           </span>
           <h2 className="font-inter font-black text-4xl sm:text-6xl lg:text-7xl tracking-tight text-white max-w-4xl mx-auto leading-none">
-            Start building your{' '}
-            <span className="font-serif italic font-normal text-zinc-300">uniform</span>.
+            Kiến tạo phong cách{' '}
+            <span className="font-serif italic font-normal text-zinc-300">độc bản</span>.
           </h2>
           <p className="font-mono text-xs text-zinc-400 max-w-md mx-auto">
             Hệ thống quần áo tối giản, kỹ thuật cao, đáp ứng mọi điều kiện thời tiết khắc nghiệt.
@@ -965,13 +986,13 @@ export default function HomePage() {
               onClick={() => scrollToSection('catalog')}
               className="px-8 py-4 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-[11px] font-bold tracking-widest uppercase transition-all shadow-xl active:translate-y-0.5 cursor-pointer"
             >
-              SHOP ALL ITEMS
+              XEM TẤT CẢ SẢN PHẨM
             </button>
             <button
               onClick={() => setSizeGuideOpen(true)}
               className="px-8 py-4 bg-transparent text-white border border-zinc-700 hover:border-white font-mono text-[11px] tracking-widest uppercase transition-colors cursor-pointer"
             >
-              SIZE GUIDE (BẢNG SIZE)
+              HƯỚNG DẪN CHỌN SIZE
             </button>
           </div>
         </div>
@@ -982,7 +1003,7 @@ export default function HomePage() {
           {/* Cột 1: CATEGORIES */}
           <div className="p-8 sm:p-10 space-y-4 font-mono text-xs">
             <h4 className="text-white font-bold tracking-widest uppercase border-b border-zinc-800 pb-2">
-              CATEGORIES (DANH MỤC)
+              DANH MỤC SẢN PHẨM
             </h4>
             <ul className="space-y-2 text-zinc-400">
               {MOCK_CATEGORIES.map((cat) => (
@@ -1006,7 +1027,7 @@ export default function HomePage() {
                   }}
                   className="hover:text-white transition-colors uppercase text-left text-zinc-500"
                 >
-                  // TẤT CẢ DROPS
+                  // TẤT CẢ SẢN PHẨM
                 </button>
               </li>
             </ul>
@@ -1015,30 +1036,30 @@ export default function HomePage() {
           {/* Cột 2: COLLECTIONS */}
           <div className="p-8 sm:p-10 space-y-4 font-mono text-xs">
             <h4 className="text-white font-bold tracking-widest uppercase border-b border-zinc-800 pb-2">
-              COLLECTIONS (BỘ SƯU TẬP)
+              BỘ SƯU TẬP TIÊU BIỂU
             </h4>
             <ul className="space-y-2 text-zinc-400">
-              <li><a href="#hero" className="hover:text-white transition-colors">// FW/26 NOMAD TECHWEAR</a></li>
-              <li><a href="#hero" className="hover:text-white transition-colors">// HEAVYWEIGHT COTTON 500GSM</a></li>
-              <li><a href="#hero" className="hover:text-white transition-colors">// MODULAR GORE-TEX SHELLS</a></li>
-              <li><a href="#hero" className="hover:text-white transition-colors">// ARCHIVE REISSUES</a></li>
+              <li><a href="#hero" className="hover:text-white transition-colors">// BST FW/26 KỸ THUẬT CAO</a></li>
+              <li><a href="#hero" className="hover:text-white transition-colors">// CHẤT VẢI CAO CẤP DÀY DẶN</a></li>
+              <li><a href="#hero" className="hover:text-white transition-colors">// ÁO KHOÁC CHỐNG THẤM VƯỢT TRỘI</a></li>
+              <li><a href="#hero" className="hover:text-white transition-colors">// DÒNG SẢN PHẨM KỶ NIỆM</a></li>
             </ul>
           </div>
 
-          {/* Cột 3: SUPPORT & SYSTEM */}
+          {/* Cột 3: SUPPORT */}
           <div className="p-8 sm:p-10 space-y-4 font-mono text-xs">
             <h4 className="text-white font-bold tracking-widest uppercase border-b border-zinc-800 pb-2">
-              SUPPORT (HỖ TRỢ)
+              HỖ TRỢ KHÁCH HÀNG
             </h4>
             <ul className="space-y-2 text-zinc-400">
               <li><Link to="/orders" className="hover:text-white transition-colors">// TRA CỨU ĐƠN HÀNG</Link></li>
-              <li><Link to="/login" className="hover:text-white transition-colors">// CỔNG KHÁCH HÀNG (CUSTOMER)</Link></li>
-              <li><Link to="/staff/login" className="hover:text-amber-400 transition-colors">// CỔNG NHÂN VIÊN (STAFF)</Link></li>
-              <li><span className="text-zinc-600">// CSKH HOTLINE: 1900 6868</span></li>
+              <li><Link to="/login" className="hover:text-white transition-colors">// TÀI KHOẢN KHÁCH HÀNG</Link></li>
+              <li><span className="text-zinc-500">// CSKH HOTLINE: 1900 6868</span></li>
+              <li><span className="text-zinc-500">// EMAIL: SUPPORT@AETHERLABS.VN</span></li>
             </ul>
           </div>
 
-          {/* Cột 4: SOCIALS & COPYRIGHT */}
+          {/* Cột 4: BRAND & STUDIO */}
           <div className="p-8 sm:p-10 space-y-4 font-mono text-xs">
             <h4 className="text-white font-bold tracking-widest uppercase border-b border-zinc-800 pb-2">
               AETHER LABS // TOKYO - HÀ NỘI
@@ -1046,8 +1067,8 @@ export default function HomePage() {
             <p className="text-zinc-500 text-[11px] leading-relaxed font-light">
               Thiết kế trang phục tối giản chịu tải cao cho cuộc sống đô thị hiện đại. Toàn bộ bản quyền và nhãn hiệu thuộc về Aether Labs Studio Corp.
             </p>
-            <div className="pt-2 text-[10px] text-zinc-600">
-              POSTGRESQL 13+ // REACT 19 // TAILWIND CSS // FRAMER MOTION
+            <div className="pt-2 text-[10px] text-zinc-500">
+              AETHER LABS APPAREL STUDIO // THU ĐÔNG 2026
             </div>
           </div>
 
