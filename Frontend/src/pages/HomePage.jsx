@@ -492,7 +492,7 @@ export default function HomePage() {
         {/* =====================================================================
             FILTER BAR (DẠNG VÁCH NGĂN 1PX LIỀN MẠCH THEO PHONG CÁCH SWISS GRID)
         ====================================================================== */}
-        <div className="border-b border-zinc-800 bg-zinc-950/70">
+        <div className="border-b border-zinc-800 bg-zinc-950/70 catalog-filter-bar">
           <div className="flex flex-col xl:flex-row items-stretch divide-y xl:divide-y-0 xl:divide-x divide-zinc-800 text-[11px] font-mono">
             
             {/* 1. Lọc Danh Mục */}
@@ -502,8 +502,8 @@ export default function HomePage() {
                 onClick={() => setSelectedCategory(null)}
                 className={`px-3 py-1 uppercase tracking-wider transition-all cursor-pointer ${
                   !selectedCategory
-                    ? 'bg-white text-black font-bold shadow-sm'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                    ? 'bg-white text-black font-bold shadow-sm catalog-filter-btn-active'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60 catalog-filter-btn-inactive'
                 }`}
               >
                 TẤT CẢ
@@ -514,8 +514,8 @@ export default function HomePage() {
                   onClick={() => setSelectedCategory(cat.slug)}
                   className={`px-3 py-1 uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
                     selectedCategory === cat.slug
-                      ? 'bg-white text-black font-bold shadow-sm'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                      ? 'bg-white text-black font-bold shadow-sm catalog-filter-btn-active'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60 catalog-filter-btn-inactive'
                   }`}
                 >
                   {cat.name}
@@ -530,8 +530,8 @@ export default function HomePage() {
                 onClick={() => setSelectedSize(null)}
                 className={`px-2.5 py-1 uppercase tracking-wider transition-all cursor-pointer ${
                   !selectedSize
-                    ? 'bg-white text-black font-bold shadow-sm'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                    ? 'bg-white text-black font-bold shadow-sm catalog-filter-btn-active'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60 catalog-filter-btn-inactive'
                 }`}
               >
                 TẤT CẢ
@@ -542,8 +542,8 @@ export default function HomePage() {
                   onClick={() => setSelectedSize(sz.name)}
                   className={`min-w-[28px] text-center px-2 py-1 uppercase tracking-wider transition-all cursor-pointer ${
                     selectedSize === sz.name
-                      ? 'bg-white text-black font-bold shadow-sm'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                      ? 'bg-white text-black font-bold shadow-sm catalog-filter-btn-active'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60 catalog-filter-btn-inactive'
                   }`}
                 >
                   {sz.name}
@@ -558,8 +558,8 @@ export default function HomePage() {
                 onClick={() => setSelectedColorId(null)}
                 className={`px-2.5 py-1 uppercase tracking-wider transition-all cursor-pointer ${
                   !selectedColorId
-                    ? 'bg-white text-black font-bold shadow-sm'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                    ? 'bg-white text-black font-bold shadow-sm catalog-filter-btn-active'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60 catalog-filter-btn-inactive'
                 }`}
               >
                 TẤT CẢ
@@ -602,8 +602,8 @@ export default function HomePage() {
                     onClick={() => setSelectedMaterialName(val)}
                     className={`px-2.5 py-1 uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
                       isActive
-                        ? 'bg-white text-black font-bold shadow-sm'
-                        : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+                        ? 'bg-white text-black font-bold shadow-sm catalog-filter-btn-active'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60 catalog-filter-btn-inactive'
                     }`}
                   >
                     {mat}
@@ -620,7 +620,7 @@ export default function HomePage() {
               {hasActiveFilters && (
                 <button
                   onClick={resetFilters}
-                  className="flex items-center gap-1.5 px-3 py-1 border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white hover:border-zinc-400 transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1 border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white hover:border-zinc-400 transition-colors cursor-pointer catalog-filter-reset-btn"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>ĐẶT LẠI</span>
@@ -936,11 +936,11 @@ export default function HomePage() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 filter brightness-95"
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-end p-6">
-                  <span className="font-mono text-[10px] text-zinc-400 tracking-wider">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-end p-6 fit-check-overlay">
+                  <span className="font-mono text-[10px] text-zinc-400 tracking-wider fit-check-label">
                     TRANG PHỤC:
                   </span>
-                  <span className="font-inter font-bold text-base text-white">
+                  <span className="font-inter font-bold text-base text-white fit-check-title">
                     {item.garment}
                   </span>
 
@@ -948,7 +948,7 @@ export default function HomePage() {
                   <div className="pt-4">
                     <button
                       onClick={() => scrollToSection('catalog')}
-                      className="px-4 py-2 border border-zinc-700 bg-black/80 hover:border-white hover:bg-white hover:text-black font-mono text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2 border border-zinc-700 bg-black/80 hover:border-white hover:bg-white hover:text-black font-mono text-[10px] font-bold tracking-widest uppercase transition-all flex items-center gap-1.5 cursor-pointer fit-check-btn"
                     >
                       <span>[ XEM PHONG CÁCH NÀY ]</span>
                       <ArrowRight className="w-3 h-3" />

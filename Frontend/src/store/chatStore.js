@@ -8,7 +8,7 @@ const INITIAL_CONVERSATIONS = [
     customer_id: 5,
     guest_name: 'Nguyễn Văn Khách',
     guest_contact: '0987654321',
-    assigned_staff_id: 3, // Phạm Chăm Sóc (cskh)
+    assigned_staff_id: 3, // CSKH
     status: 'open',
     created_at: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
     closed_at: null,

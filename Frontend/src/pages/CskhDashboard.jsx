@@ -92,7 +92,7 @@ export default function CskhDashboard() {
 
         <div className="text-right text-xs">
           <p className="text-neutral-400">Nhân viên trực:</p>
-          <p className="font-bold text-white">{user?.full_name || 'Phạm Chăm Sóc'}</p>
+          <p className="font-bold text-white">{user?.full_name || 'CSKH'}</p>
         </div>
       </div>
 
