@@ -135,13 +135,13 @@ export default function LiveChatWidget() {
           'Dạ phương thức Bank QR tích hợp VietQR Napas247 tự động kiểm tra số tiền và gạch nợ đơn hàng lập tức chỉ trong 3 giây!';
       } else {
         replyContent =
-          'Cảm ơn bạn đã nhắn tin cho Aether Labs. Chuyên viên CSKH Phạm Chăm Sóc đã nhận được yêu cầu và sẽ hỗ trợ chi tiết cho bạn ngay ạ!';
+          'Cảm ơn bạn đã nhắn tin cho Aether Labs. Chuyên viên CSKH đã nhận được yêu cầu và sẽ hỗ trợ chi tiết cho bạn ngay ạ!';
       }
 
       sendMessage({
         conversation_id: currentConversation.id,
         sender_type: 'staff',
-        sender_id: 3, // Phạm Chăm Sóc
+        sender_id: 3, // CSKH
         content: replyContent,
       });
     }, 1200);
@@ -299,7 +299,7 @@ export default function LiveChatWidget() {
                     <Clock className="w-3 h-3 text-emerald-400" />
                     Phiên: #{currentConversation?.id}
                   </span>
-                  <span>Chuyên viên: Phạm Chăm Sóc (CSKH)</span>
+                  <span>Chuyên viên: CSKH</span>
                 </div>
 
                 {/* Danh sách tin nhắn */}
@@ -313,7 +313,7 @@ export default function LiveChatWidget() {
                       >
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className="font-mono text-[9px] uppercase tracking-wider text-zinc-500">
-                            {isMe ? 'BẠN (GUEST / CUSTOMER)' : '[CS_STAFF] PHẠM CHĂM SÓC'}
+                            {isMe ? 'BẠN (GUEST / CUSTOMER)' : '[CSKH] HỖ TRỢ TRỰC TUYẾN'}
                           </span>
                           <span className="font-mono text-[9px] text-zinc-600">
                             {new Date(msg.created_at).toLocaleTimeString('vi-VN', {

@@ -429,19 +429,19 @@ export default function ProductDetailPage() {
 
                         {/* Icon móc treo quần áo góc dưới bên trái (như ảnh chụp) */}
                         {idx < 2 && (
-                          <div className="absolute bottom-2.5 left-2.5 w-6 h-6 rounded-full bg-black/80 border border-white/20 flex items-center justify-center text-xs text-white shadow-md">
+                          <div className="absolute bottom-2.5 left-2.5 w-6 h-6 rounded-full bg-black/80 border border-white/20 flex items-center justify-center text-xs text-white shadow-md photo-hanger-icon">
                             <span>👔</span>
                           </div>
                         )}
 
                         {/* Tag thông số chiều cao người mẫu góc dưới bên phải */}
-                        <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 bg-black/80 backdrop-blur-xs font-mono text-[9px] text-zinc-200 tracking-wide border border-white/10">
+                        <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 bg-black/80 backdrop-blur-xs font-mono text-[9px] text-zinc-200 tracking-wide border border-white/10 photo-label-tag">
                           {img.label || (idx < 2 ? (product.id === 1 ? 'Người mẫu: 168cm / Size quần áo: S' : 'Người mẫu: 176cm / Size quần áo: L') : 'Chi tiết sản phẩm')}
                         </div>
 
                         {/* Chỉ báo màu đang chọn */}
                         {isSelectedColor && (
-                          <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white text-black font-mono text-[9px] font-bold tracking-widest shadow-xs">
+                          <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-white text-black font-mono text-[9px] font-bold tracking-widest shadow-xs photo-active-color-tag">
                             MÀU ĐANG CHỌN
                           </div>
                         )}
@@ -651,8 +651,8 @@ export default function ProductDetailPage() {
                           onClick={() => setSelectedSizeName(sz.name)}
                           className={`min-w-[44px] py-2 px-3 border font-mono text-xs font-bold tracking-wider transition-all cursor-pointer text-center ${
                             isSelected
-                              ? 'border-amber-400 bg-amber-400 text-black shadow-md'
-                              : 'border-zinc-800 bg-black text-zinc-400 hover:border-zinc-600 hover:text-white'
+                              ? 'border-amber-400 bg-amber-400 text-black shadow-md pdp-size-btn-active'
+                              : 'border-zinc-800 bg-black text-zinc-400 hover:border-zinc-600 hover:text-white pdp-size-btn-inactive'
                           }`}
                         >
                           {sz.name}
@@ -680,8 +680,8 @@ export default function ProductDetailPage() {
                           onClick={() => setSelectedMaterialName(mat.name)}
                           className={`px-3 py-1.5 border font-mono text-[11px] tracking-wider transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-white bg-white text-black font-bold shadow-md'
-                              : 'border-zinc-800 bg-black text-zinc-400 hover:border-zinc-600 hover:text-white'
+                              ? 'border-white bg-white text-black font-bold shadow-md pdp-material-btn-active'
+                              : 'border-zinc-800 bg-black text-zinc-400 hover:border-zinc-600 hover:text-white pdp-size-btn-inactive'
                           }`}
                         >
                           {mat.name}
@@ -750,7 +750,7 @@ export default function ProductDetailPage() {
                   {/* Nút 1: ADD TO CART */}
                   <button
                     onClick={handleAddToCart}
-                    className="w-full py-4 border border-zinc-700 bg-black hover:border-white hover:bg-zinc-900 text-white font-mono text-xs font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:translate-y-0.5"
+                    className="w-full py-4 border border-zinc-700 bg-black hover:border-white hover:bg-zinc-900 text-white font-mono text-xs font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:translate-y-0.5 pdp-btn-cart"
                   >
                     <ShoppingBag className="w-4 h-4" />
                     <span>THÊM VÀO GIỎ HÀNG</span>
@@ -759,7 +759,7 @@ export default function ProductDetailPage() {
                   {/* Nút 2: BUY NOW (chuyển thẳng sang Checkout với orders.is_buy_now = true) */}
                   <button
                     onClick={handleBuyNow}
-                    className="w-full py-4 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-xs font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl active:translate-y-0.5"
+                    className="w-full py-4 bg-[#fafafa] text-[#080808] hover:bg-zinc-200 font-mono text-xs font-black tracking-widest uppercase transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl active:translate-y-0.5 pdp-btn-buynow"
                   >
                     <Zap className="w-4 h-4 fill-black" />
                     <span>MUA NGAY</span>

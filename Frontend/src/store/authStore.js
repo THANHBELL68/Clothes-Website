@@ -90,7 +90,7 @@ export const DEMO_ACCOUNTS = [
   {
     id: 1,
     email: 'admin@shop.local',
-    full_name: 'Trần Quản Trị (Super Admin)',
+    full_name: 'Admin',
     phone: '0911000111',
     role: 'SUPER_ADMIN',
     is_active: true,
@@ -99,7 +99,7 @@ export const DEMO_ACCOUNTS = [
   {
     id: 2,
     email: 'warehouse@shop.local',
-    full_name: 'Lê Thủ Kho (Warehouse Manager)',
+    full_name: 'Warehouse',
     phone: '0922000222',
     role: 'WAREHOUSE_MANAGER',
     is_active: true,
@@ -108,7 +108,7 @@ export const DEMO_ACCOUNTS = [
   {
     id: 3,
     email: 'cskh@shop.local',
-    full_name: 'Phạm Chăm Sóc (CS Staff)',
+    full_name: 'CSKH',
     phone: '0933000333',
     role: 'CS_STAFF',
     is_active: true,
@@ -117,7 +117,7 @@ export const DEMO_ACCOUNTS = [
   {
     id: 5,
     email: 'customer@shop.local',
-    full_name: 'Nguyễn Văn Khách (Thành Viên)',
+    full_name: 'Khách Hàng',
     phone: '0987654321',
     role: 'CUSTOMER',
     is_active: true,
@@ -262,6 +262,26 @@ export const useAuthStore = create(
     }),
     {
       name: 'aether-auth-storage-v2',
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const renameMap = {
+          'admin@shop.local': 'Admin',
+          'warehouse@shop.local': 'Warehouse',
+          'cskh@shop.local': 'CSKH',
+          'customer@shop.local': 'Khách Hàng',
+        };
+        if (state.allUsers) {
+          state.allUsers = state.allUsers.map((u) => {
+            if (renameMap[u.email]) {
+              return { ...u, full_name: renameMap[u.email] };
+            }
+            return u;
+          });
+        }
+        if (state.user && renameMap[state.user.email]) {
+          state.user = { ...state.user, full_name: renameMap[state.user.email] };
+        }
+      },
     }
   )
 );

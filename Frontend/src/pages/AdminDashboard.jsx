@@ -473,7 +473,7 @@ export default function AdminDashboard() {
       carrierId: exportModal.carrierId,
       carrierName,
       trackingCode: tracking,
-      userName: user?.full_name || 'Lê Thủ Kho',
+      userName: user?.full_name || 'Warehouse',
     });
 
     if (!res.success) {
@@ -517,7 +517,7 @@ export default function AdminDashboard() {
           unit_cost: Number(importForm.unitCost),
         },
       ],
-      userName: user?.full_name || 'Lê Thủ Kho',
+      userName: user?.full_name || 'Warehouse',
     });
 
     if (res.success) {
@@ -531,14 +531,14 @@ export default function AdminDashboard() {
     const newStocktake = createStocktake({
       note: stocktakeForm.note,
       items: stocktakeForm.items,
-      userName: user?.full_name || 'Lê Thủ Kho',
+      userName: user?.full_name || 'Warehouse',
     });
     toast.success(`Đã tạo đợt kiểm kê ${newStocktake.code} thành công!`);
   };
 
   // Quản lý kho: Cân bằng tồn kho từ phiếu kiểm kê
   const handleApplyBalance = (stocktakeId) => {
-    const res = applyStocktakeBalance(stocktakeId, user?.full_name || 'Lê Thủ Kho');
+    const res = applyStocktakeBalance(stocktakeId, user?.full_name || 'Warehouse');
     if (res.success) {
       toast.success(res.message);
     } else {
@@ -556,7 +556,7 @@ export default function AdminDashboard() {
     try {
       window.dispatchEvent(new CustomEvent('shop_orders_updated'));
     } catch {}
-    logAudit(user?.full_name || 'Lê Thủ Kho', 'ORDER_STATUS_UPDATE', `Đơn #${orderId}`, `Chuyển trạng thái sang: ${newStatus.toUpperCase()}`);
+    logAudit(user?.full_name || 'Warehouse', 'ORDER_STATUS_UPDATE', `Đơn #${orderId}`, `Chuyển trạng thái sang: ${newStatus.toUpperCase()}`);
     toast.success(`Đã chuyển đơn hàng sang: ${newStatus.toUpperCase()}`);
   };
 
@@ -623,7 +623,7 @@ export default function AdminDashboard() {
         <div className="flex flex-wrap items-center gap-3">
           <div className="text-right font-mono text-xs">
             <p className="text-zinc-500 uppercase text-[10px]">Tài khoản đang trực:</p>
-            <p className="text-white font-bold">{user?.full_name || 'Trần Quản Trị'}</p>
+            <p className="text-white font-bold">{user?.full_name || 'Admin'}</p>
             <div className="flex items-center gap-2 mt-0.5 justify-end">
               <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border ${
                 currentRole === 'SUPER_ADMIN'

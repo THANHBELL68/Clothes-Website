@@ -229,6 +229,7 @@
 .light .bg-zinc-950\/30,
 .light .bg-zinc-950\/40,
 .light .bg-zinc-950\/60,
+.light .bg-zinc-950\/70,
 .light .bg-zinc-950\/80,
 .light .bg-zinc-950\/90 {
   background-color: #f4f4f5 !important;
@@ -397,3 +398,138 @@
   border-color: #e5e7eb !important;
 }
 
+
+/* ============================================================================
+   LIGHT MODE: CATALOG FILTER BAR & CONTROLS
+   ============================================================================ */
+.light .catalog-filter-bar {
+  background-color: #f4f4f5 !important;
+  border-color: #e5e7eb !important;
+}
+
+.light .catalog-filter-bar span {
+  color: #6b7280 !important;
+}
+
+.light .catalog-filter-btn-inactive {
+  color: #4b5563 !important;
+  background-color: transparent !important;
+}
+
+.light .catalog-filter-btn-inactive:hover {
+  color: #09090b !important;
+  background-color: #e4e4e7 !important;
+}
+
+.light .catalog-filter-btn-active {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border-color: #09090b !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.light .catalog-filter-reset-btn {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #09090b !important;
+}
+
+.light .catalog-filter-reset-btn:hover {
+  background-color: #f3f4f6 !important;
+  border-color: #09090b !important;
+}
+
+/* ============================================================================
+   LIGHT MODE: FIT CHECKS SECTION
+   ============================================================================ */
+.light .fit-check-overlay {
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%) !important;
+}
+
+.light .fit-check-label {
+  color: #6b7280 !important;
+}
+
+.light .fit-check-title {
+  color: #09090b !important;
+}
+
+.light .fit-check-btn {
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+  color: #09090b !important;
+}
+
+.light .fit-check-btn:hover {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border-color: #09090b !important;
+}
+
+/* ============================================================================
+   LIGHT MODE: PRODUCT DETAIL GALLERY BADGES & ACTION BUTTONS
+   ============================================================================ */
+.light .photo-label-tag {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  color: #09090b !important;
+  border-color: #d1d5db !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .photo-hanger-icon {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: #d1d5db !important;
+  color: #09090b !important;
+}
+
+.light .photo-active-color-tag {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+}
+
+.light .pdp-material-btn-active {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border-color: #09090b !important;
+}
+
+.light .pdp-size-btn-inactive {
+  background-color: #ffffff !important;
+  color: #4b5563 !important;
+  border-color: #e5e7eb !important;
+}
+
+.light .pdp-size-btn-inactive:hover {
+  border-color: #9ca3af !important;
+  color: #09090b !important;
+}
+
+.light .pdp-btn-cart {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  border-color: #09090b !important;
+}
+
+.light .pdp-btn-cart:hover {
+  background-color: #f4f4f5 !important;
+}
+
+.light .pdp-btn-buynow {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+}
+
+.light .pdp-btn-buynow:hover {
+  background-color: #27272a !important;
+}
+
+/* Staff Quick Login */
+.light .staff-quick-login-btn {
+  background-color: #fafafa !important;
+  border-color: #e5e7eb !important;
+}
+
+.light .staff-quick-login-btn:hover {
+  background-color: #f4f4f5 !important;
+  border-color: #f59e0b !important;
+}

@@ -20,7 +20,7 @@ export const useDbStore = create(
           shipping_carrier_name: 'Giao Hàng Nhanh (GHN)',
           tracking_code: 'GHN88291039VN',
           note: 'Xuất kho cho đơn hàng đóng gói ORD-20261014-001',
-          created_by: 'Lê Thủ Kho',
+          created_by: 'Warehouse',
           created_at: '2026-10-12T14:15:00Z',
           items: [
             { id: 1, variant_id: 101, sku: 'AKN-479073-00-S', quantity: 1, unit_cost: 320000 },
@@ -36,7 +36,7 @@ export const useDbStore = create(
           shipping_carrier_name: null,
           tracking_code: null,
           note: 'Nhập hàng lô mới từ Xưởng Vải Rayon & Giả Lông Cừu Hà Nội',
-          created_by: 'Lê Thủ Kho',
+          created_by: 'Warehouse',
           created_at: '2026-10-10T08:30:00Z',
           items: [
             { id: 2, variant_id: 101, sku: 'AKN-479073-00-S', quantity: 50, unit_cost: 320000 },
@@ -51,7 +51,7 @@ export const useDbStore = create(
           id: 1,
           code: 'KK-20261015-01',
           note: 'Kiểm kê định kỳ tháng 10/2026 mẫu Áo Rayon Nữ & Áo Khoác Lông Cừu',
-          created_by: 'Lê Thủ Kho',
+          created_by: 'Warehouse',
           created_at: '2026-10-15T09:00:00Z',
           items: [
             {
@@ -82,7 +82,7 @@ export const useDbStore = create(
           id: 1,
           return_request_id: 101,
           order_code: 'ORD-20261014-001',
-          customer_name: 'Nguyễn Văn Khách',
+          customer_name: 'Khách Hàng',
           customer_phone: '0987654321',
           amount: 599000,
           status: 'pending', // 'pending' | 'processing' | 'completed' | 'failed'
@@ -104,7 +104,7 @@ export const useDbStore = create(
           quantity: 50,
           reason: 'IMPORT',
           ref_type: 'stock_document',
-          created_by: 'Lê Thủ Kho',
+          created_by: 'Warehouse',
           created_at: '2026-10-10T08:30:00Z',
         },
         {
@@ -114,7 +114,7 @@ export const useDbStore = create(
           quantity: -1,
           reason: 'EXPORT',
           ref_type: 'stock_document',
-          created_by: 'Lê Thủ Kho',
+          created_by: 'Warehouse',
           created_at: '2026-10-12T14:15:00Z',
         },
         {
@@ -124,7 +124,7 @@ export const useDbStore = create(
           quantity: 40,
           reason: 'IMPORT',
           ref_type: 'stock_document',
-          created_by: 'Lê Thủ Kho',
+          created_by: 'Warehouse',
           created_at: '2026-10-10T08:30:00Z',
         },
       ],
@@ -134,7 +134,7 @@ export const useDbStore = create(
         {
           id: 1,
           product_id: 1,
-          user_name: 'Nguyễn Văn Khách',
+          user_name: 'Khách Hàng',
           rating: 5,
           comment: 'Chất vải rayon rất mát và mềm, phom áo chuẩn công sở!',
           status: 'approved', // 'pending' | 'approved' | 'hidden'
@@ -214,7 +214,7 @@ export const useDbStore = create(
       auditLogs: [
         {
           id: 1,
-          user_name: 'Trần Quản Trị (SUPER_ADMIN)',
+          user_name: 'Admin (SUPER_ADMIN)',
           action: 'INIT_SYSTEM',
           target: 'Database shop_db',
           detail: 'Khởi tạo cấu trúc 37 bảng PostgreSQL và phân quyền RBAC',
@@ -222,7 +222,7 @@ export const useDbStore = create(
         },
         {
           id: 2,
-          user_name: 'Lê Thủ Kho (WAREHOUSE_MANAGER)',
+          user_name: 'Warehouse (WAREHOUSE_MANAGER)',
           action: 'CREATE_RECEIPT',
           target: 'PNK-20261010-01',
           detail: 'Nhập kho 90 sản phẩm Áo kiểu nữ Rayon & Áo khoác nam lông cừu',
@@ -230,7 +230,7 @@ export const useDbStore = create(
         },
         {
           id: 3,
-          user_name: 'Phạm Chăm Sóc (CS_STAFF)',
+          user_name: 'CSKH (CS_STAFF)',
           action: 'REVIEW_APPROVE',
           target: 'Review #1',
           detail: 'Duyệt công khai đánh giá của khách hàng Nguyễn Văn Khách',
@@ -302,7 +302,7 @@ export const useDbStore = create(
           shipping_carrier_name: carrierName || (carrierId === 1 ? 'Giao Hàng Nhanh (GHN)' : 'Giao Hàng Tiết Kiệm (GHTK)'),
           tracking_code: trackingCode || (type === 'export' ? 'VN' + Date.now().toString().slice(-8) : null),
           note: note || (type === 'export' ? `Xuất kho đơn ${order.code}` : `Nhập hàng từ ${supplierName || 'Nhà cung cấp'}`),
-          created_by: userName || 'Lê Thủ Kho',
+          created_by: userName || 'Warehouse',
           created_at: new Date().toISOString(),
           items: items || (order ? order.items : []),
         };
@@ -333,7 +333,7 @@ export const useDbStore = create(
             quantity: Number(it.quantity) * deltaMultiplier,
             reason: type === 'export' ? 'EXPORT' : (type === 'return_import' ? 'RETURN_IN' : 'IMPORT'),
             ref_type: 'stock_document',
-            created_by: userName || 'Lê Thủ Kho',
+            created_by: userName || 'Warehouse',
             created_at: new Date().toISOString(),
           }));
 
@@ -345,7 +345,7 @@ export const useDbStore = create(
         });
 
         get().logAudit(
-          userName || 'Lê Thủ Kho',
+          userName || 'Warehouse',
           type === 'export' ? 'STOCK_EXPORT' : 'STOCK_IMPORT',
           code,
           `${type === 'export' ? 'Xuất kho cho đơn ' + order?.code : 'Nhập kho thành công'}`
@@ -374,7 +374,7 @@ export const useDbStore = create(
           id: Date.now(),
           code,
           note: note || 'Kiểm kê kho định kỳ',
-          created_by: userName || 'Lê Thủ Kho',
+          created_by: userName || 'Warehouse',
           created_at: new Date().toISOString(),
           items: computedItems,
         };
@@ -383,7 +383,7 @@ export const useDbStore = create(
           stocktakes: [newStocktake, ...state.stocktakes],
         }));
 
-        get().logAudit(userName || 'Lê Thủ Kho', 'STOCKTAKE_CREATE', code, `Lập phiếu kiểm kê ${computedItems.length} mặt hàng`);
+        get().logAudit(userName || 'Warehouse', 'STOCKTAKE_CREATE', code, `Lập phiếu kiểm kê ${computedItems.length} mặt hàng`);
         return newStocktake;
       },
 
@@ -415,7 +415,7 @@ export const useDbStore = create(
               quantity: it.difference,
               reason: 'STOCKTAKE_ADJUST',
               ref_type: 'stocktake',
-              created_by: userName || 'Lê Thủ Kho',
+              created_by: userName || 'Warehouse',
               created_at: new Date().toISOString(),
             }));
 
@@ -425,7 +425,7 @@ export const useDbStore = create(
           };
         });
 
-        get().logAudit(userName || 'Lê Thủ Kho', 'STOCKTAKE_APPLY', stocktake.code, 'Cân bằng tồn kho theo số lượng thực tế kiểm kê');
+        get().logAudit(userName || 'Warehouse', 'STOCKTAKE_APPLY', stocktake.code, 'Cân bằng tồn kho theo số lượng thực tế kiểm kê');
         return { success: true, message: 'Đã cân bằng số lượng tồn kho theo số liệu thực tế thành công!' };
       },
 

@@ -33,7 +33,7 @@ export default function WarehouseDashboard() {
       order,
       carrier: 'Giao Hàng Tiết Kiệm (GHTK)',
       trackingCode: 'GHTK-' + Date.now().toString().slice(-6),
-      userName: user?.full_name || 'Lê Thủ Kho',
+      userName: user?.full_name || 'Warehouse',
     });
 
     // 2. Chuyển trạng thái đơn sang 'shipping' trong orderStore
@@ -62,7 +62,7 @@ export default function WarehouseDashboard() {
 
     createGoodsReceipt({
       supplierName: receiptForm.supplierName,
-      userName: user?.full_name || 'Lê Thủ Kho',
+      userName: user?.full_name || 'Warehouse',
       items: [
         {
           variant_id: Number(receiptForm.variantId),
@@ -82,7 +82,7 @@ export default function WarehouseDashboard() {
       orderCode: order.code,
       variantId: item.variant_id,
       quantity: item.quantity,
-      userName: user?.full_name || 'Lê Thủ Kho',
+      userName: user?.full_name || 'Warehouse',
     });
 
     // Chuyển trạng thái return_request sang 'received'
@@ -125,7 +125,7 @@ export default function WarehouseDashboard() {
         {/* User Badge */}
         <div className="text-right text-xs">
           <p className="text-neutral-400">Đang đăng nhập:</p>
-          <p className="font-bold text-white">{user?.full_name || 'Lê Thủ Kho'}</p>
+          <p className="font-bold text-white">{user?.full_name || 'Warehouse'}</p>
         </div>
       </div>
 

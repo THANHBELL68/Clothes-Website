@@ -97,7 +97,7 @@ export default function StaffAuthPage() {
                   key={acc.id}
                   onClick={() => handleQuickStaffLogin(acc)}
                   type="button"
-                  className="w-full text-left p-3.5 bg-[#141414] hover:bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 transition-all flex items-center justify-between group cursor-pointer"
+                  className="w-full text-left p-3.5 bg-[#141414] hover:bg-zinc-900 border border-zinc-800 hover:border-amber-500/50 transition-all flex items-center justify-between group cursor-pointer staff-quick-login-btn"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-zinc-950 border border-zinc-800 flex items-center justify-center">
